@@ -81,13 +81,15 @@ GITHUB_PAT=personal_access_token_required_for_forkHistory
 
 ## Setup and run
 
-```sh
-git clone https://github.com/BeNikk/musicblocks-backend.git
-cd musicblocks-backend
+Clone this repository (or your fork) and install dependencies:
+
+```bash
+git clone https://github.com/sugarlabs/musicblocks-git-backend.git
+cd musicblocks-git-backend
 npm install
 npm run build
 npm start
-```
+
 
 The server listens on `PORT` from `.env` default is `5000` in code if unset.
 
