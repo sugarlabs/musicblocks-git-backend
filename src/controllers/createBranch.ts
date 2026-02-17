@@ -17,8 +17,10 @@ export const handleCreateBranch = async (req: Request, res: Response): Promise<v
             return;
         }
         res.json({ success: true, branch: result });
+        return;
     } catch (error) {
         console.error('Error creating branch:', error);
         res.status(500).json({ error: "Could not create branch" });
+        return;
     }
 };

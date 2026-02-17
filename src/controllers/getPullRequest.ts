@@ -9,8 +9,10 @@ export const handleGetOpenPullRequests = async (req: Request, res: Response) => 
     try {
         const prs = await getOpenPullRequestsWithProjectData(repo);
         res.json(prs);
+        return;
     } catch (err) {
-        res.status(500).json({ error: "Failed to fetch pull requests." });
         console.log(err);
+        res.status(500).json({ error: "Failed to fetch pull requests." });
+        return;
     }
 };
