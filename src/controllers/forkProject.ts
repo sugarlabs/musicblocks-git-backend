@@ -6,13 +6,16 @@ export const handleForkProject = async (req: Request, res: Response) => {
 
     if (!repositoryName) {
         res.status(400).json({ error: "Missing required fields" });
+        return;
     }
 
     try {
         const { repoName, key, projectData } = await forkRepo(repositoryName);
         res.json({ repoName, key, projectData });
+        return;
     } catch (err) {
         console.error(err);
         res.status(500).json({ error: "Could not fork repository" });
+        return;
     }
 };
