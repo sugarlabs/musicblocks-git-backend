@@ -160,7 +160,7 @@ Success response
 Possible errors
 
 - `400 Missing key or RepoName`
-- `300 Commit message is required`
+- `400 Commit message is required`
 - `403 Invalid key, permission denied`
 
 ### Fork project
