@@ -6,7 +6,8 @@ export const handleEditProject = async (req: Request, res: Response) => {
 
   try {
     if (!commitMessage) {
-      res.status(300).json({ message: "Commit message is required" });
+      res.status(400).json({ error: "Commit message is required" });
+      return;
     }
     await updateProjectDataFile(repoName, projectData, commitMessage);
     res.status(200).json({ message: "Project updated successfully" });

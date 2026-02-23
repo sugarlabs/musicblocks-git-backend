@@ -6,6 +6,7 @@ export const handleForkWithHistory = async (req: Request, res: Response) => {
 
   if (!sourceRepo) {
     res.status(400).json({ error: 'Missing required parameters.' });
+    return;
   }
 
   try {
