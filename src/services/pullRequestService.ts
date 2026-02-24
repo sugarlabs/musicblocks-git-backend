@@ -3,6 +3,10 @@ import { getAuthenticatedOctokit } from "../utils/octokit";
 import { parseGitHubRepoUrl } from "../utils/parseGithubUrl";
 
 export const createPRFromFork = async ({ forkRepo, updatedProjectData, }: { forkRepo: string; updatedProjectData: object; }) => {
+    if (process.env.TEST_MODE === 'true') {
+    // Simulate a PR creation response
+    return { html_url: 'https://github.com/fake/fake-repo/pull/123' };
+  }
     const octokit = await getAuthenticatedOctokit();
     const org = config.org;
 

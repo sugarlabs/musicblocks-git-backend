@@ -7,7 +7,8 @@ dotenv.config();
 export const config = {
   appId: process.env.GITHUB_APP_ID,
   org: process.env.ORG_NAME,
-  privateKey: fs.readFileSync(path.resolve(__dirname,'../../src/config', './private-key.pem'), "utf-8"),
+  // Use async loading for privateKey
+  privateKeyPromise: fs.promises.readFile(path.resolve(__dirname,'../../src/config', './private-key.pem'), "utf-8"),
   installationId: process.env.GITHUB_INSTALLATION_ID,
   forkedOrg: process.env.FORKED_ORG_NAME,
   pat: process.env.GITHUB_PAT
