@@ -6,6 +6,7 @@ export const handleForkProject = async (req: Request, res: Response) => {
 
     if (!repositoryName) {
         res.status(400).json({ error: "Missing required fields" });
+        return;
     }
 
     try {

@@ -6,6 +6,7 @@ export const handleCreatePR = async (req: Request, res: Response) => {
 
     if (!forkRepo || !updatedProjectData) {
         res.status(400).json({ error: 'forkRepo and updatedProjectData are required.' });
+        return;
     }
 
     try {
