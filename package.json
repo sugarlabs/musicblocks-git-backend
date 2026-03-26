@@ -4,7 +4,7 @@
   "description": "Empowering students with Git through Musicblocks",
   "main": "index.js",
   "scripts": {
-    "build": "npx tsc && cp src/openapi.yaml dist/openapi.yaml",
+    "build": "npx tsc && xcopy src\\openapi.yaml dist\\ /Y",
     "start": "node dist/index.js",
     "test": "jest",
     "test:watch": "jest --watch",
