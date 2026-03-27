@@ -6,11 +6,12 @@ export const handleForkWithHistory = async (req: Request, res: Response) => {
 
   if (!sourceRepo) {
     res.status(400).json({ error: 'Missing required parameters.' });
+    return;
   }
 
   try {
-    const forkUrl = await forkWithHistory(sourceRepo);
-    res.json({ success: true, repoUrl: forkUrl });
+    const { repoName, key, projectData, description } = await forkWithHistory(sourceRepo);
+    res.json({ success: true, repoName, key, projectData, description });
   } catch (error) {
     console.error('Fork error:', error);
     res.status(500).json({ error: 'Failed to fork with history.' });
