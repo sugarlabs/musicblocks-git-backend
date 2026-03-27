@@ -14,6 +14,7 @@ import { handleCreateBranch } from '../controllers/createBranch';
 
 import { handleDeleteProject } from '../controllers/deleteProject';
 import { handleSearchProjects } from '../controllers/searchProjects';
+import { handleMigratePlanet } from '../controllers/migratePlanet';
 
 const projectRouter = express.Router();
 
@@ -31,5 +32,6 @@ projectRouter.post('/createBranch', handleCreateBranch);
 
 projectRouter.delete('/delete', verifyOwner, handleDeleteProject);
 projectRouter.get('/search', handleSearchProjects);
+projectRouter.post('/migrate-planet', handleMigratePlanet);
 
 export default projectRouter;
