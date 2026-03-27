@@ -11,7 +11,7 @@ export const getInstallationToken = async (): Promise<string> => {
         },
     });
     if (!res.ok) {
-        const error = res.text();
+        const error = await res.text();
         throw new Error(`Failed to get Installation Access Token: ${res.status} ${error}`);
     }
     const data = await res.json();
