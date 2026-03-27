@@ -12,6 +12,10 @@ import { handleGetProjectData } from '../controllers/getProjectData';
 import { handleGetProjects } from '../controllers/getProjects';
 import { handleCreateBranch } from '../controllers/createBranch';
 
+import { handleDeleteProject } from '../controllers/deleteProject';
+import { handleSearchProjects } from '../controllers/searchProjects';
+import { handleMigratePlanet } from '../controllers/migratePlanet';
+
 const projectRouter = express.Router();
 
 projectRouter.post('/create', handleCreateProject);
@@ -25,4 +29,9 @@ projectRouter.get("/getProjectDataAtCommit",handleGetProjectDataWithCommit);
 projectRouter.get("/getProjectData",handleGetProjectData);
 projectRouter.get("/allRepos",handleGetProjects);
 projectRouter.post('/createBranch', handleCreateBranch);
+
+projectRouter.delete('/delete', verifyOwner, handleDeleteProject);
+projectRouter.get('/search', handleSearchProjects);
+projectRouter.post('/migrate-planet', handleMigratePlanet);
+
 export default projectRouter;
