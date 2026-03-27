@@ -13,7 +13,7 @@ import { handleGetProjects } from '../controllers/getProjects';
 import { handleCreateBranch } from '../controllers/createBranch';
 
 import { handleDeleteProject } from '../controllers/deleteProject';
-
+import { handleSearchProjects } from '../controllers/searchProjects';
 
 const projectRouter = express.Router();
 
@@ -30,5 +30,6 @@ projectRouter.get("/allRepos",handleGetProjects);
 projectRouter.post('/createBranch', handleCreateBranch);
 
 projectRouter.delete('/delete', verifyOwner, handleDeleteProject);
+projectRouter.get('/search', handleSearchProjects);
 
 export default projectRouter;
