@@ -16,7 +16,7 @@ import { handleDeleteProject } from '../controllers/deleteProject';
 import { handleSearchProjects } from '../controllers/searchProjects';
 import { handleMigratePlanet } from '../controllers/migratePlanet';
 import { handleGetTutorials } from '../controllers/getTutorials';
-
+import { handleCompareProjects } from '../controllers/compareProjects';
 
 const projectRouter = express.Router();
 
@@ -36,6 +36,6 @@ projectRouter.delete('/delete', verifyOwner, handleDeleteProject);
 projectRouter.get('/search', handleSearchProjects);
 projectRouter.post('/migrate-planet', handleMigratePlanet);
 projectRouter.get('/tutorials', handleGetTutorials);
-
+projectRouter.get('/compare', handleCompareProjects);
 
 export default projectRouter;
