@@ -6,7 +6,7 @@ Empowering students with Git through Musicblocks
 
 ## Overview
 
-**Music Blocks backend** is a Node.js and Express service written in TypeScript. It lets the Music Blocks frontend create, edit, fork, and browse projects that are stored as GitHub repositories. The service automates repository creation, manages metadata, and authenticates using a GitHub App installation. It is developed as a potential replacement to the existing `Planet` server in Musicblocks and introduce students with the concept of Git and version control. 
+**Music Blocks backend** is a Node.js and Express service written in TypeScript. It lets the Music Blocks frontend create, edit, fork, and browse projects that are stored as GitHub repositories. The service automates repository creation, manages metadata, and authenticates using a GitHub App installation. It is developed as a potential replacement to the existing `Planet` server in Musicblocks and introduce students with the concept of Git and version control.
 
 ## Key features
 
