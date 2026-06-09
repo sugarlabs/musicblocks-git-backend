@@ -1,7 +1,20 @@
 import { jest } from '@jest/globals';
 import request from 'supertest';
 import express, { Request, Response, NextFunction } from 'express';
-import projectRouter from '../../src/routes/projectRoutes';
+
+jest.mock('../../src/utils/db', () => ({
+  __esModule: true,
+  default: {
+    prepare: jest.fn(() => ({
+      all: jest.fn(),
+      get: jest.fn(),
+      run: jest.fn(),
+    })),
+    exec: jest.fn(),
+    pragma: jest.fn(),
+    transaction: jest.fn((handler: unknown) => handler),
+  },
+}));
 
 // Mock all controllers
 jest.mock('../../src/controllers/createProject');
@@ -14,6 +27,11 @@ jest.mock('../../src/controllers/getCommits');
 jest.mock('../../src/controllers/getProjectDataWithCommit');
 jest.mock('../../src/controllers/getProjectData');
 jest.mock('../../src/controllers/getProjects');
+jest.mock('../../src/controllers/searchProjects');
+jest.mock('../../src/controllers/getProjectDetails');
+jest.mock('../../src/controllers/likeProject');
+
+const projectRouter = require('../../src/routes/projectRoutes').default;
 
 // Mock middleware
 jest.mock('../../src/middleware/verifyOwner', () => ({
@@ -31,6 +49,9 @@ import { handleGetCommits } from '../../src/controllers/getCommits';
 import { handleGetProjectDataWithCommit } from '../../src/controllers/getProjectDataWithCommit';
 import { handleGetProjectData } from '../../src/controllers/getProjectData';
 import { handleGetProjects } from '../../src/controllers/getProjects';
+import { handleSearchProjects } from '../../src/controllers/searchProjects';
+import { handleGetProjectDetails } from '../../src/controllers/getProjectDetails';
+import { handleGetLikeCount, handleLikeProject } from '../../src/controllers/likeProject';
 
 // Type-safe mocked versions
 const mockHandleCreateProject = jest.mocked(handleCreateProject);
@@ -43,6 +64,10 @@ const mockHandleGetCommits = jest.mocked(handleGetCommits);
 const mockHandleGetProjectDataWithCommit = jest.mocked(handleGetProjectDataWithCommit);
 const mockHandleGetProjectData = jest.mocked(handleGetProjectData);
 const mockHandleGetProjects = jest.mocked(handleGetProjects);
+const mockHandleSearchProjects = jest.mocked(handleSearchProjects);
+const mockHandleGetProjectDetails = jest.mocked(handleGetProjectDetails);
+const mockHandleLikeProject = jest.mocked(handleLikeProject);
+const mockHandleGetLikeCount = jest.mocked(handleGetLikeCount);
 
 describe('Project Routes', () => {
   let app: express.Application;
@@ -277,6 +302,67 @@ describe('Project Routes', () => {
     });
   });
 
+  describe('GET /search', () => {
+    it('should route to handleSearchProjects', async () => {
+      mockHandleSearchProjects.mockImplementation(async (req: Request, res: Response) => {
+        res.status(200).json({ data: [] });
+      });
+
+      const response = await request(app)
+        .get('/api/projects/search?q=music')
+        .expect(200);
+
+      expect(mockHandleSearchProjects).toHaveBeenCalledTimes(1);
+      expect(response.body).toEqual({ data: [] });
+    });
+  });
+
+  describe('GET /project/:repoName', () => {
+    it('should route to handleGetProjectDetails', async () => {
+      mockHandleGetProjectDetails.mockImplementation(async (req: Request, res: Response) => {
+        res.status(200).json({ repoName: req.params.repoName });
+      });
+
+      const response = await request(app)
+        .get('/api/projects/project/test-project')
+        .expect(200);
+
+      expect(mockHandleGetProjectDetails).toHaveBeenCalledTimes(1);
+      expect(response.body).toEqual({ repoName: 'test-project' });
+    });
+  });
+
+  describe('POST /like', () => {
+    it('should route to handleLikeProject', async () => {
+      mockHandleLikeProject.mockImplementation(async (req: Request, res: Response) => {
+        res.status(200).json({ repoName: req.body.repoName, likes: 1 });
+      });
+
+      const response = await request(app)
+        .post('/api/projects/like')
+        .send({ repoName: 'test-project', userId: 'user-1', like: true })
+        .expect(200);
+
+      expect(mockHandleLikeProject).toHaveBeenCalledTimes(1);
+      expect(response.body).toEqual({ repoName: 'test-project', likes: 1 });
+    });
+  });
+
+  describe('GET /likes/:repoName', () => {
+    it('should route to handleGetLikeCount', async () => {
+      mockHandleGetLikeCount.mockImplementation(async (req: Request, res: Response) => {
+        res.status(200).json({ repoName: req.params.repoName, likes: 3 });
+      });
+
+      const response = await request(app)
+        .get('/api/projects/likes/test-project')
+        .expect(200);
+
+      expect(mockHandleGetLikeCount).toHaveBeenCalledTimes(1);
+      expect(response.body).toEqual({ repoName: 'test-project', likes: 3 });
+    });
+  });
+
   describe('error handling', () => {
     it('should handle controller errors gracefully', async () => {
       mockHandleCreateProject.mockImplementation(async () => {
@@ -361,6 +447,18 @@ describe('Project Routes', () => {
       mockHandleGetProjects.mockImplementation(async (req: Request, res: Response) => {
         res.status(200).json({ success: true });
       });
+      mockHandleSearchProjects.mockImplementation(async (req: Request, res: Response) => {
+        res.status(200).json({ success: true });
+      });
+      mockHandleGetProjectDetails.mockImplementation(async (req: Request, res: Response) => {
+        res.status(200).json({ success: true });
+      });
+      mockHandleLikeProject.mockImplementation(async (req: Request, res: Response) => {
+        res.status(200).json({ success: true });
+      });
+      mockHandleGetLikeCount.mockImplementation(async (req: Request, res: Response) => {
+        res.status(200).json({ success: true });
+      });
 
       // Test all routes
       await request(app).post('/api/projects/create').send({}).expect(200);
@@ -373,6 +471,10 @@ describe('Project Routes', () => {
       await request(app).get('/api/projects/getProjectDataAtCommit').expect(200);
       await request(app).get('/api/projects/getProjectData').expect(200);
       await request(app).get('/api/projects/allRepos').expect(200);
+      await request(app).get('/api/projects/search?q=music').expect(200);
+      await request(app).get('/api/projects/project/test-project').expect(200);
+      await request(app).post('/api/projects/like').send({}).expect(200);
+      await request(app).get('/api/projects/likes/test-project').expect(200);
     });
   });
 });

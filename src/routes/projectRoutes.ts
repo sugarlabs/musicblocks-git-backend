@@ -11,6 +11,9 @@ import { handleGetProjectDataWithCommit } from '../controllers/getProjectDataWit
 import { handleGetProjectData } from '../controllers/getProjectData';
 import { handleGetProjects } from '../controllers/getProjects';
 import { handleCreateBranch } from '../controllers/createBranch';
+import { handleSearchProjects } from '../controllers/searchProjects';
+import { handleGetProjectDetails } from '../controllers/getProjectDetails';
+import { handleGetLikeCount, handleLikeProject } from '../controllers/likeProject';
 
 const projectRouter = express.Router();
 
@@ -24,5 +27,9 @@ projectRouter.get("/commitHistory",handleGetCommits);
 projectRouter.get("/getProjectDataAtCommit",handleGetProjectDataWithCommit);
 projectRouter.get("/getProjectData",handleGetProjectData);
 projectRouter.get("/allRepos",handleGetProjects);
+projectRouter.get("/search", handleSearchProjects);
+projectRouter.get("/project/:repoName", handleGetProjectDetails);
+projectRouter.post("/like", handleLikeProject);
+projectRouter.get("/likes/:repoName", handleGetLikeCount);
 projectRouter.post('/createBranch', handleCreateBranch);
 export default projectRouter;
