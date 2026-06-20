@@ -52,18 +52,35 @@ export const searchProjects = async (queryStr: string, pagination: Pagination) =
             WHERE projects_fts MATCH ? AND p.visible = 1
         `;
 
-        const projects = db.prepare(query).all(safeQuery, limit, offset);
-        const totalCount = db.prepare(countQuery).get(safeQuery) as { total: number };
+        try {
+            const projects = db.prepare(query).all(safeQuery, limit, offset);
+            const totalCount = db.prepare(countQuery).get(safeQuery) as { total: number };
 
-        return {
-            data: projects,
-            meta: {
-                page,
-                limit,
-                total: totalCount.total,
-                totalPages: Math.ceil(totalCount.total / limit)
+            return {
+                data: projects,
+                meta: {
+                    page,
+                    limit,
+                    total: totalCount.total,
+                    totalPages: Math.ceil(totalCount.total / limit)
+                }
+            };
+        } catch (ftsErr: any) {
+            // FTS5 throws a parse error on certain edge-case inputs (e.g. lone
+            // dashes or operators) that survive the character filter. Return
+            // empty results rather than a 500 so the frontend degrades cleanly.
+            if (
+                typeof ftsErr?.message === 'string' &&
+                (ftsErr.message.includes('fts5') || ftsErr.message.includes('malformed'))
+            ) {
+                console.warn('[search] FTS5 parse error for query:', safeQuery, ftsErr.message);
+                return {
+                    data: [],
+                    meta: { page, limit, total: 0, totalPages: 0 }
+                };
             }
-        };
+            throw ftsErr;
+        }
     } catch (error) {
         console.error("Error searching projects:", error);
         throw error;
