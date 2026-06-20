@@ -1,3 +1,6 @@
+// hashedKey is intentionally excluded (secret).
+// searchKeywords is intentionally excluded — it is an internal indexing field
+// used by the FTS5 table only and should not be leaked to API consumers.
 export const PUBLIC_PROJECT_COLUMNS = `
     repoName,
     projectName,
@@ -11,7 +14,6 @@ export const PUBLIC_PROJECT_COLUMNS = `
     downloads,
     hasThumbnail,
     isMigrated,
-    searchKeywords,
     visible,
     isMusicBlocks
 `;
