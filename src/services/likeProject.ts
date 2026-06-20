@@ -56,9 +56,10 @@ export const likeProject = db.transaction(({ repoName, userId, like }: LikeProje
 
     return {
         repoName,
-        // `liked` reflects what ACTUALLY happened in the DB, not just the
-        // requested action. If the user already liked/unliked, this is false.
-        liked: like ? actuallyChanged : !actuallyChanged,
+        // `liked` reflects whether the action actually changed the DB state.
+        // true  → the like/unlike was applied (row inserted or deleted)
+        // false → it was a no-op (already liked, or never liked before unliking)
+        liked: actuallyChanged,
         likes: updated.likes,
     };
 });

@@ -27,7 +27,7 @@ export const verifyOwner = async (req: Request, res: Response, next: NextFunctio
         res.locals.metaSha = metaFile.sha;
         next();
     } catch (error) {
-        console.log("error in verifying the owner", error);
+        console.error("[verifyOwner] Error verifying project owner:", error);
         res.status(404).json({ error: 'metaData.json not found or repo invalid' });
         return;
     }
