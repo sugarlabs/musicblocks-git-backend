@@ -52,9 +52,42 @@ const initializeLikes = () => {
     `);
 };
 
+const initializeThumbnails = () => {
+    // Two-table schema produced by the Python thumbnail migration pipeline.
+    // thumbnails stores one row per unique PNG blob (deduplicated by sha256).
+    // project_thumbnails maps planet_id → sha256_hash (classification = 'real'
+    // means a real blob is present; blank/placeholder rows have sha256_hash = NULL).
+    // Using CREATE TABLE IF NOT EXISTS so this is safe on a fully-migrated DB.
+    db.exec(`
+        CREATE TABLE IF NOT EXISTS thumbnails (
+            sha256_hash          TEXT PRIMARY KEY,
+            png_data             BLOB NOT NULL,
+            width                INTEGER,
+            height               INTEGER,
+            file_size            INTEGER NOT NULL,
+            first_seen_planet_id TEXT,
+            created_at           TEXT DEFAULT (datetime('now')),
+            updated_at           TEXT DEFAULT (datetime('now'))
+        );
+
+        CREATE TABLE IF NOT EXISTS project_thumbnails (
+            planet_id      TEXT PRIMARY KEY,
+            sha256_hash    TEXT,
+            classification TEXT NOT NULL CHECK(classification IN ('real','blank','placeholder')),
+            classified_at  TEXT DEFAULT (datetime('now')),
+            updated_at     TEXT DEFAULT (datetime('now')),
+            FOREIGN KEY (sha256_hash) REFERENCES thumbnails(sha256_hash) ON UPDATE CASCADE
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_project_thumbnails_hash
+            ON project_thumbnails(sha256_hash);
+    `);
+};
+
 ensureProjectsTableExists();
 initializeIndexes();
 initializeLikes();
+initializeThumbnails();
 
 console.log(`[db] Connected to ${dbPath}`);
 
