@@ -14,6 +14,10 @@ import { handleCreateBranch } from '../controllers/createBranch';
 import { handleSearchProjects } from '../controllers/searchProjects';
 import { handleGetProjectDetails } from '../controllers/getProjectDetails';
 import { handleGetLikeCount, handleLikeProject } from '../controllers/likeProject';
+import { handleGetThumbnail } from '../controllers/getThumbnail';
+import { handleDownloadProject } from '../controllers/downloadProject';
+import { handlePublishProject } from '../controllers/publishProject';
+import { handleReportProject } from '../controllers/reportProject';
 
 const projectRouter = express.Router();
 
@@ -32,4 +36,9 @@ projectRouter.get("/project/:repoName", handleGetProjectDetails);
 projectRouter.post("/like", handleLikeProject);
 projectRouter.get("/likes/:repoName", handleGetLikeCount);
 projectRouter.post('/createBranch', handleCreateBranch);
+projectRouter.get("/thumbnail/:repoName", handleGetThumbnail);
+projectRouter.get("/download/:repoName", handleDownloadProject);
+projectRouter.post("/publish", verifyOwner, handlePublishProject);
+projectRouter.post("/report", handleReportProject);
+
 export default projectRouter;
