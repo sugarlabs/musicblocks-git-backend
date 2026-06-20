@@ -4,11 +4,6 @@ import { getProjectDetails } from "../services/getProjectDetails";
 export const handleGetProjectDetails = async (req: Request, res: Response) => {
     try {
         const { repoName } = req.params;
-        if (!repoName) {
-             res.status(400).json({ error: "Missing repoName parameter" });
-             return;
-        }
-
         const project = await getProjectDetails(repoName);
         
         if (!project) {
