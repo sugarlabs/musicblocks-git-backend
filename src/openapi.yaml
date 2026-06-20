@@ -1,280 +1,1042 @@
 openapi: 3.0.3
 info:
-  title: Git Backend for Musicblocks
-  version: 1.0.0
-  description: API documentation for the Musicblocks project backend.
+  title: Music Blocks Git Backend API
+  version: 2.0.0
+  description: |
+    REST API for the Music Blocks Planet — a public gallery where students can
+    publish, browse, like, fork, and report each other's projects.
+
+    Projects are stored as individual GitHub repositories under a SugarLabs
+    organisation. A local SQLite file (`projects.sqlite`) acts as the fast
+    social/search index and thumbnail cache. Authentication for write operations
+    uses a SHA-256 `hashedKey` stored in each project's `metaData.json`; no
+    GitHub account is required from students.
+
+  contact:
+    name: SugarLabs Music Blocks
+    url: https://github.com/sugarlabs/musicblocks
 
 servers:
   - url: http://localhost:3000/api/github
     description: Local development server
+  - url: https://musicblocks.sugarlabs.org/api/github
+    description: Production server
 
+tags:
+  - name: Projects
+    description: Core CRUD operations for Music Blocks projects
+  - name: Planet
+    description: Browse, search, like, and moderate the public Planet gallery
+  - name: Commits & Branches
+    description: Git history, branch, and commit operations
+  - name: Pull Requests
+    description: Create and inspect pull requests for collaborative editing
+
+# ─────────────────────────────────────────────
+# Reusable components
+# ─────────────────────────────────────────────
+components:
+  schemas:
+    # ── Shared primitives ──────────────────────
+    RepoName:
+      type: string
+      pattern: "^[a-zA-Z0-9_-]+$"
+      example: "my-musicblocks-project"
+
+    ProjectData:
+      type: object
+      description: The raw JSON block structure of a Music Blocks project.
+      example:
+        blocks:
+          - id: 1
+            type: note
+            value: C4
+
+    HashedKey:
+      type: string
+      description: |
+        SHA-256 hash of the student's unique local key. Used in place of
+        traditional authentication to avoid requiring a GitHub account.
+      example: "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+
+    # ── Response bodies ────────────────────────
+    ProjectSummary:
+      type: object
+      properties:
+        repoName:
+          $ref: '#/components/schemas/RepoName'
+        projectName:
+          type: string
+          example: "My First Song"
+        creatorName:
+          type: string
+          example: "anon-student"
+        description:
+          type: string
+          example: "A simple C-major scale"
+        theme:
+          type: string
+          description: Comma-separated topic tags from the GitHub repo.
+          example: "music,math"
+        likes:
+          type: integer
+          example: 42
+        downloads:
+          type: integer
+          example: 130
+        hasThumbnail:
+          type: integer
+          description: "1 if a thumbnail image is stored in SQLite, 0 otherwise."
+          enum: [0, 1]
+          example: 1
+        visible:
+          type: integer
+          description: "1 if the project has been published to the Global Planet tab, 0 otherwise."
+          enum: [0, 1]
+          example: 1
+        createdAt:
+          type: string
+          format: date-time
+          example: "2026-06-01T10:30:00Z"
+        updatedAt:
+          type: string
+          format: date-time
+          example: "2026-06-15T08:00:00Z"
+
+    ProjectDetail:
+      allOf:
+        - $ref: '#/components/schemas/ProjectSummary'
+        - type: object
+          properties:
+            isMusicBlocks:
+              type: integer
+              description: "1 for Music Blocks, 0 for Turtle Blocks."
+              enum: [0, 1]
+              example: 1
+
+    PaginatedProjects:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProjectSummary'
+        page:
+          type: integer
+          example: 1
+        limit:
+          type: integer
+          example: 20
+        total:
+          type: integer
+          example: 5542
+
+    CommitEntry:
+      type: object
+      properties:
+        sha:
+          type: string
+          example: "a1b2c3d4e5f6"
+        message:
+          type: string
+          example: "Updated tempo and note sequence"
+        author:
+          type: string
+          example: "anon-student"
+        date:
+          type: string
+          format: date-time
+          example: "2026-06-10T14:00:00Z"
+
+    # ── Error ──────────────────────────────────
+    Error:
+      type: object
+      properties:
+        message:
+          type: string
+        error:
+          type: string
+
+  parameters:
+    RepoNamePath:
+      name: repoName
+      in: path
+      required: true
+      description: The unique GitHub repository name for the project.
+      schema:
+        $ref: '#/components/schemas/RepoName'
+
+    PageQuery:
+      name: page
+      in: query
+      required: false
+      description: Page number for pagination (1-indexed).
+      schema:
+        type: integer
+        default: 1
+        minimum: 1
+        example: 1
+
+    LimitQuery:
+      name: limit
+      in: query
+      required: false
+      description: Number of results per page.
+      schema:
+        type: integer
+        default: 20
+        minimum: 1
+        maximum: 100
+        example: 20
+
+# ─────────────────────────────────────────────
+# Paths
+# ─────────────────────────────────────────────
 paths:
+
+  # ════════════════════════════════════════════
+  # PROJECTS — CRUD
+  # ════════════════════════════════════════════
+
   /create:
     post:
       summary: Create a new project
-      tags:
-        - Projects
+      description: |
+        Creates a new GitHub repository under the SugarLabs org and writes three
+        files to it: `projectData.json`, `metaData.json` (containing the
+        `hashedKey` for future auth), and optionally `thumbnail.png`.
+        The project row is also inserted into SQLite with `visible = 0` until
+        the student explicitly calls `/publish`.
+      tags: [Projects]
       requestBody:
         required: true
         content:
           application/json:
             schema:
               type: object
-              required:
-                - projectData
+              required: [projectData]
               properties:
                 repoName:
-                  type: string
-                  example: "My First Repo"
+                  $ref: '#/components/schemas/RepoName'
                 theme:
                   type: string
-                  example: "default"
+                  description: Comma-separated topic tags (e.g. "music,math").
+                  example: "music"
                 description:
                   type: string
-                  example: "Musicblocks project"
+                  example: "A simple C-major scale project"
                 projectData:
-                  type: object
-                  example:
-                    blocks:
-                      - id: 1
-                        type: note
-                        value: C4
+                  $ref: '#/components/schemas/ProjectData'
       responses:
         "200":
-          description: Project created successfully
+          description: Project repository created successfully.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  repoName:
+                    $ref: '#/components/schemas/RepoName'
+                  url:
+                    type: string
+                    example: "https://github.com/sugarlabs-mb/my-musicblocks-project"
         "400":
-          description: Missing required project data
+          description: Missing required `projectData`.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
         "500":
-          description: Internal server error
+          description: Internal server error or GitHub API failure.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
 
   /edit:
     put:
       summary: Edit an existing project
-      tags:
-        - Projects
+      description: |
+        Commits an updated `projectData.json` to the project's `main` branch.
+        Requires the student's original `key` to pass the `verifyOwner`
+        middleware, which validates it against the `hashedKey` stored in
+        `metaData.json` on GitHub. No GitHub account is required.
+      tags: [Projects]
       requestBody:
         required: true
         content:
           application/json:
             schema:
               type: object
-              required:
-                - repoName
-                - projectData
-                - commitMessage
+              required: [repoName, key, projectData, commitMessage]
               properties:
                 repoName:
+                  $ref: '#/components/schemas/RepoName'
+                key:
                   type: string
-                  example: "my-musicblocks-project"
+                  description: The student's plain-text key (hashed server-side for comparison).
+                  example: "my-secret-local-key"
                 projectData:
-                  type: object
-                  example:
-                    blocks:
-                      - id: 2
-                        type: note
-                        value: D4
+                  $ref: '#/components/schemas/ProjectData'
                 commitMessage:
                   type: string
                   example: "Updated tempo and note sequence"
       responses:
         "200":
-          description: Project updated successfully
-        "300":
-          description: Commit message is required
+          description: Project updated successfully.
+        "400":
+          description: Missing `repoName`, `key`, `projectData`, or `commitMessage`.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        "403":
+          description: Invalid key — caller is not the project owner.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
         "500":
-          description: Internal server error
+          description: Internal server error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
 
   /fork:
     post:
-      summary: Fork an existing project
-      tags:
-        - Projects
+      summary: Fork a project (shallow copy)
+      description: |
+        Creates a new repository that is a copy of the source project's latest
+        state. Unlike `/forkHistory`, this does not copy the full git history,
+        making it faster and cheaper on the GitHub API quota.
+      tags: [Projects]
       requestBody:
         required: true
         content:
           application/json:
             schema:
               type: object
-              required:
-                - repositoryName
+              required: [repositoryName]
               properties:
                 repositoryName:
-                  type: string
-                  example: "musicblocks-repo"
+                  $ref: '#/components/schemas/RepoName'
       responses:
         "200":
-          description: Repository forked successfully
+          description: Repository forked successfully.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  newRepoName:
+                    $ref: '#/components/schemas/RepoName'
         "400":
-          description: Missing required fields
+          description: Missing `repositoryName`.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
         "500":
-          description: Could not fork repository
+          description: GitHub API failure.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
 
-  /fork-with-history:
+  /forkHistory:
     post:
-      summary: Fork a project with full history
-      tags:
-        - Projects
+      summary: Fork a project with full git history
+      description: |
+        Creates a new repository that is a complete clone of the source project,
+        preserving all commit history. This uses more GitHub API quota than a
+        shallow fork but gives the student the full edit timeline.
+      tags: [Projects]
       requestBody:
         required: true
         content:
           application/json:
             schema:
               type: object
-              required:
-                - sourceRepo
+              required: [sourceRepo]
               properties:
                 sourceRepo:
-                  type: string
-                  example: "musicblocks-repo"
+                  $ref: '#/components/schemas/RepoName'
       responses:
         "200":
-          description: Fork with history successful
+          description: Fork with history successful.
         "400":
-          description: Missing required parameters
+          description: Missing `sourceRepo`.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
         "500":
-          description: Failed to fork with history
+          description: Failed to fork with history.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
 
-  /commits:
+  /getProjectData:
     get:
-      summary: Get commit history for a project
-      tags:
-        - Commits
+      summary: Get the latest project data (JSON block structure)
+      description: |
+        Returns the raw content of `projectData.json` from the project's
+        `main` branch. This is what Music Blocks loads when a student clicks
+        "Open in Music Blocks".
+      tags: [Projects]
       parameters:
         - name: repoName
           in: query
           required: true
           schema:
-            type: string
-            example: "my-musicblocks-project"
+            $ref: '#/components/schemas/RepoName'
       responses:
         "200":
-          description: Commit history retrieved successfully
+          description: Project data retrieved successfully.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  content:
+                    $ref: '#/components/schemas/ProjectData'
         "400":
-          description: No repository name provided
+          description: Missing `repoName` query parameter.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        "404":
+          description: Project repository not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
         "500":
-          description: Internal server error
-
-  /project-data:
-    get:
-      summary: Get project data
-      tags:
-        - Projects
-      parameters:
-        - name: repoName
-          in: query
-          required: true
-          schema:
-            type: string
-            example: "my-musicblocks-project"
-      responses:
-        "200":
-          description: Project data retrieved successfully
-        "400":
-          description: No repoName provided
-        "500":
-          description: Internal server error
+          description: Internal server error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
 
   /getProjectDataAtCommit:
     get:
       summary: Get project data at a specific commit
-      tags:
-        - Projects
+      description: |
+        Returns the content of `projectData.json` as it existed at a specific
+        git commit SHA. Used to implement the version-history viewer.
+      tags: [Projects]
       parameters:
         - name: repoName
           in: query
           required: true
           schema:
-            type: string
-            example: "my-musicblocks-project"
+            $ref: '#/components/schemas/RepoName'
         - name: sha
           in: query
           required: true
+          description: The full or abbreviated git commit SHA.
           schema:
             type: string
-            example: "a1b2c3"
+            example: "a1b2c3d4"
       responses:
         "200":
-          description: Project data for the commit retrieved successfully
+          description: Project data at the given commit retrieved successfully.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  content:
+                    $ref: '#/components/schemas/ProjectData'
+                  sha:
+                    type: string
+                    example: "a1b2c3d4"
         "400":
-          description: Invalid repository name or SHA
+          description: Missing `repoName` or `sha` parameter.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
         "500":
-          description: Internal server error
+          description: Internal server error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  # ════════════════════════════════════════════
+  # PLANET — Browse, Search, Like, Moderate
+  # ════════════════════════════════════════════
 
   /allRepos:
     get:
-      summary: Get all repositories (paginated)
-      tags:
-        - Projects
+      summary: Browse all public projects (paginated)
+      description: |
+        Returns all projects where `visible = 1` from the SQLite index, with
+        support for sorting and topic-based filtering. This is the primary
+        endpoint powering the Global tab of the Planet gallery.
+
+        **Sorting options:**
+        | `sort` value  | Behaviour                  |
+        |---------------|----------------------------|
+        | `createdAt`   | Newest first (default)     |
+        | `likes`       | Most liked first           |
+        | `downloads`   | Most downloaded first      |
+        | `projectName` | Alphabetical A → Z         |
+      tags: [Planet]
       parameters:
-        - name: page
+        - $ref: '#/components/parameters/PageQuery'
+        - $ref: '#/components/parameters/LimitQuery'
+        - name: sort
+          in: query
+          required: false
+          description: Column to sort by.
+          schema:
+            type: string
+            enum: [createdAt, likes, downloads, projectName]
+            default: createdAt
+        - name: topic
+          in: query
+          required: false
+          description: Filter projects by a single GitHub topic tag (e.g. `music`).
+          schema:
+            type: string
+            example: "music"
+      responses:
+        "200":
+          description: Project list retrieved successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedProjects'
+        "500":
+          description: Failed to fetch repositories.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /search:
+    get:
+      summary: Full-text search across all projects
+      description: |
+        Uses the SQLite FTS5 virtual table (`projects_fts`) to run a full-text
+        search across `projectName`, `description`, and `creatorName`. Results
+        are ranked by relevance (BM25). The query is sanitised and capped at
+        100 characters to prevent injection.
+      tags: [Planet]
+      parameters:
+        - name: q
+          in: query
+          required: true
+          description: The search term. Maximum 100 characters.
+          schema:
+            type: string
+            maxLength: 100
+            example: "C major scale"
+        - $ref: '#/components/parameters/PageQuery'
+        - $ref: '#/components/parameters/LimitQuery'
+      responses:
+        "200":
+          description: Search results retrieved successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedProjects'
+        "400":
+          description: Missing or invalid `q` parameter.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        "500":
+          description: Failed to search projects.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /project/{repoName}:
+    get:
+      summary: Get full metadata for a single project
+      description: |
+        Returns the full metadata row for a project from SQLite, including
+        the `hasThumbnail` flag. The frontend uses this flag to decide
+        whether to call `/thumbnail/:repoName` or use the local placeholder
+        image — avoiding unnecessary network requests for projects without
+        a thumbnail.
+      tags: [Planet]
+      parameters:
+        - $ref: '#/components/parameters/RepoNamePath'
+      responses:
+        "200":
+          description: Project details retrieved successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProjectDetail'
+        "404":
+          description: Project not found in SQLite.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        "500":
+          description: Failed to fetch project details.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /like:
+    post:
+      summary: Like or unlike a project
+      description: |
+        Toggles a like for a project in SQLite. `userId` is the student's
+        anonymous identifier (derived from their local key) — no GitHub account
+        required. A student can only like a project once (enforced by the
+        `(repoName, userId)` primary key in the `project_likes` table).
+      tags: [Planet]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [repoName, userId, like]
+              properties:
+                repoName:
+                  $ref: '#/components/schemas/RepoName'
+                userId:
+                  type: string
+                  description: Anonymous unique identifier for the student.
+                  example: "anon-abc123"
+                like:
+                  type: boolean
+                  description: "`true` to add a like, `false` to remove it."
+                  example: true
+      responses:
+        "200":
+          description: Like status updated successfully.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  likes:
+                    type: integer
+                    description: Updated total like count.
+                    example: 43
+        "400":
+          description: Missing or invalid `repoName`, `userId`, or `like` fields.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        "404":
+          description: Project not found in SQLite.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        "500":
+          description: Failed to update like.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /likes/{repoName}:
+    get:
+      summary: Get the total like count for a project
+      description: Returns the current like count for a project from SQLite.
+      tags: [Planet]
+      parameters:
+        - $ref: '#/components/parameters/RepoNamePath'
+      responses:
+        "200":
+          description: Like count retrieved successfully.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  repoName:
+                    $ref: '#/components/schemas/RepoName'
+                  likes:
+                    type: integer
+                    example: 42
+        "404":
+          description: Project not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        "500":
+          description: Failed to fetch likes.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /thumbnail/{repoName}:
+    get:
+      summary: Serve a project thumbnail image
+      description: |
+        Returns the project's thumbnail as a PNG image, served directly from
+        the `project_thumbnails` SQLite table (a separate BLOB table to keep
+        the main `projects` table scan-friendly).
+
+        **Frontend usage pattern:**
+        - Check `hasThumbnail` from `/project/:repoName` first.
+        - Only call this endpoint if `hasThumbnail === 1`.
+        - This eliminates all unnecessary network requests.
+
+        The response includes a `Cache-Control: public, max-age=3600` header
+        so browsers cache the image for 1 hour.
+      tags: [Planet]
+      parameters:
+        - $ref: '#/components/parameters/RepoNamePath'
+      responses:
+        "200":
+          description: PNG thumbnail image.
+          content:
+            image/png:
+              schema:
+                type: string
+                format: binary
+          headers:
+            Cache-Control:
+              description: Browser caching directive.
+              schema:
+                type: string
+                example: "public, max-age=3600"
+        "400":
+          description: Invalid `repoName`.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        "404":
+          description: No thumbnail found for this project.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        "500":
+          description: Internal server error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /download/{repoName}:
+    get:
+      summary: Download a project as a ZIP archive
+      description: |
+        Proxies a ZIP download of the project's `main` branch from GitHub and
+        streams it to the client. The browser will prompt a file download named
+        `{repoName}.zip`.
+      tags: [Planet]
+      parameters:
+        - $ref: '#/components/parameters/RepoNamePath'
+      responses:
+        "200":
+          description: ZIP archive of the project.
+          content:
+            application/zip:
+              schema:
+                type: string
+                format: binary
+          headers:
+            Content-Disposition:
+              description: Instructs the browser to download the file.
+              schema:
+                type: string
+                example: 'attachment; filename="my-musicblocks-project.zip"'
+        "400":
+          description: Invalid `repoName`.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        "404":
+          description: Project repository not found on GitHub.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        "500":
+          description: Internal server error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /publish:
+    post:
+      summary: Publish a project to the Global Planet tab
+      description: |
+        Sets `visible = 1` for the project in the SQLite `projects` table,
+        making it appear in the Global tab of the Planet for all students.
+
+        **Authentication:** The `verifyOwner` middleware validates the caller's
+        `key` against the `hashedKey` stored in `metaData.json` on GitHub
+        before allowing this operation.
+      tags: [Planet]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [repoName, key]
+              properties:
+                repoName:
+                  $ref: '#/components/schemas/RepoName'
+                key:
+                  type: string
+                  description: The student's plain-text key for ownership verification.
+                  example: "my-secret-local-key"
+      responses:
+        "200":
+          description: Project published successfully.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Project published successfully"
+        "400":
+          description: Missing or invalid `repoName`.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        "403":
+          description: Invalid key — caller is not the project owner.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        "404":
+          description: Project not found in SQLite database.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        "500":
+          description: Internal server error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /report:
+    post:
+      summary: Report a project for moderation
+      description: |
+        Creates a GitHub Issue in the central moderation repository
+        (configured via `MODERATION_REPO` environment variable, defaults to
+        `mb-moderation`). All reports flow to a single repo so SugarLabs
+        admins can review them without navigating across 5,000+ project repos.
+
+        No authentication is required to submit a report.
+      tags: [Planet]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [repoName]
+              properties:
+                repoName:
+                  $ref: '#/components/schemas/RepoName'
+                description:
+                  type: string
+                  description: The reason for the report (optional but recommended).
+                  maxLength: 1000
+                  example: "This project contains inappropriate content."
+      responses:
+        "200":
+          description: Report submitted successfully.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Project reported successfully"
+        "400":
+          description: Missing or invalid `repoName`.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        "500":
+          description: Internal server error or GitHub API failure.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  # ════════════════════════════════════════════
+  # COMMITS & BRANCHES
+  # ════════════════════════════════════════════
+
+  /commitHistory:
+    get:
+      summary: Get the commit history for a project
+      description: |
+        Returns the list of commits on the `main` branch of the project's
+        GitHub repository. Used by the version-history viewer in Music Blocks.
+      tags: [Commits & Branches]
+      parameters:
+        - name: repoName
           in: query
           required: true
           schema:
-            type: integer
-            example: 1
+            $ref: '#/components/schemas/RepoName'
       responses:
         "200":
-          description: Repositories retrieved successfully
+          description: Commit history retrieved successfully.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CommitEntry'
         "400":
-          description: Page parameter missing
+          description: Missing `repoName` query parameter.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
         "500":
-          description: Internal server error
+          description: Internal server error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /createBranch:
+    post:
+      summary: Create a new branch in a project repository
+      description: |
+        Creates a new git branch off `main` in the project's GitHub repository.
+        Useful for collaborative editing workflows where a student wants to
+        propose changes without modifying the main version.
+      tags: [Commits & Branches]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [repoName, branchName]
+              properties:
+                repoName:
+                  $ref: '#/components/schemas/RepoName'
+                branchName:
+                  type: string
+                  example: "feature/my-remix"
+      responses:
+        "200":
+          description: Branch created successfully.
+        "400":
+          description: Missing `repoName` or `branchName`.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        "500":
+          description: Internal server error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  # ════════════════════════════════════════════
+  # PULL REQUESTS
+  # ════════════════════════════════════════════
 
   /openPR:
     get:
       summary: Get open pull requests for a project
-      tags:
-        - Pull Requests
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required:
-                - repo
-              properties:
-                repo:
-                  type: string
-                  example: "my-musicblocks-project"
+      description: |
+        Returns all currently open pull requests on the project's repository.
+        Used to show students pending collaboration proposals.
+      tags: [Pull Requests]
+      parameters:
+        - name: repo
+          in: query
+          required: true
+          description: The repository name to check for open pull requests.
+          schema:
+            $ref: '#/components/schemas/RepoName'
       responses:
         "200":
-          description: Open pull requests retrieved successfully
+          description: Open pull requests retrieved successfully.
         "400":
-          description: Missing or invalid repo parameter
+          description: Missing or invalid `repo` parameter.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
         "500":
-          description: Internal server error
+          description: Internal server error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
 
   /create-pr:
     post:
-      summary: Create a pull request from a fork
-      tags:
-        - Pull Requests
+      summary: Create a pull request from a forked project
+      description: |
+        Opens a pull request from a fork's branch back to the original project's
+        `main` branch. This is the mechanism for a student to propose their
+        changes to the original author.
+      tags: [Pull Requests]
       requestBody:
         required: true
         content:
           application/json:
             schema:
               type: object
-              required:
-                - forkRepo
-                - updatedProjectData
+              required: [forkRepo, updatedProjectData]
               properties:
                 forkRepo:
-                  type: string
-                  example: "forked-musicblocks-repo"
+                  $ref: '#/components/schemas/RepoName'
                 updatedProjectData:
-                  type: object
-                  example:
-                    blocks:
-                      - id: 1
-                        type: note
-                        value: C4
+                  $ref: '#/components/schemas/ProjectData'
       responses:
         "200":
-          description: Pull request created successfully
+          description: Pull request created successfully.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  prUrl:
+                    type: string
+                    example: "https://github.com/sugarlabs-mb/my-musicblocks-project/pull/1"
         "400":
-          description: Missing forkRepo or updatedProjectData
+          description: Missing `forkRepo` or `updatedProjectData`.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
         "500":
-          description: Failed to create pull request
-
+          description: Failed to create pull request.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
