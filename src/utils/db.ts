@@ -1,8 +1,10 @@
 import Database from 'better-sqlite3';
 import path from 'path';
 
-// Resolve the path to the sqlite file in the parent directory (Gitbased/projects.sqlite)
-const dbPath = path.resolve(__dirname, '../../../projects.sqlite');
+// SQLITE_PATH env var overrides for production (e.g. Sunjammer).
+// Locally it falls back to Gitbased/projects.sqlite (the sibling folder).
+const dbPath = process.env.SQLITE_PATH
+    || path.resolve(__dirname, '../../../projects.sqlite');
 
 const db = new Database(dbPath, {
     fileMustExist: true,
