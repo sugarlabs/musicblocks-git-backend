@@ -17,10 +17,12 @@ info:
     url: https://github.com/sugarlabs/musicblocks
 
 servers:
-  - url: http://localhost:3000/api/github
+  - url: http://localhost:5000/api/github
     description: Local development server
   - url: https://musicblocks.sugarlabs.org/api/github
-    description: Production server
+    description: Production server (Sunjammer)
+  - url: https://planet.sugarlabs.org/api/github
+    description: Production server (Planet)
 
 tags:
   - name: Projects
@@ -121,15 +123,21 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/ProjectSummary'
-        page:
-          type: integer
-          example: 1
-        limit:
-          type: integer
-          example: 20
-        total:
-          type: integer
-          example: 5542
+        meta:
+          type: object
+          properties:
+            page:
+              type: integer
+              example: 1
+            limit:
+              type: integer
+              example: 24
+            total:
+              type: integer
+              example: 5542
+            totalPages:
+              type: integer
+              example: 232
 
     CommitEntry:
       type: object
@@ -184,10 +192,10 @@ components:
       description: Number of results per page.
       schema:
         type: integer
-        default: 20
+        default: 24
         minimum: 1
-        maximum: 100
-        example: 20
+        maximum: 50
+        example: 24
 
 # ─────────────────────────────────────────────
 # Paths
@@ -235,11 +243,17 @@ paths:
               schema:
                 type: object
                 properties:
-                  repoName:
-                    $ref: '#/components/schemas/RepoName'
-                  url:
+                  success:
+                    type: boolean
+                    example: true
+                  key:
                     type: string
-                    example: "https://github.com/sugarlabs-mb/my-musicblocks-project"
+                    description: |
+                      The student's plain-text ownership key. Must be saved locally —
+                      it is never stored server-side in plain text. Required for /edit and /publish.
+                    example: "a3f9d2c1e8b7..."
+                  repository:
+                    $ref: '#/components/schemas/RepoName'
         "400":
           description: Missing required `projectData`.
           content:
@@ -329,8 +343,17 @@ paths:
               schema:
                 type: object
                 properties:
-                  newRepoName:
+                  repoName:
                     $ref: '#/components/schemas/RepoName'
+                  key:
+                    type: string
+                    description: Ownership key for the new fork. Save locally.
+                    example: "b5c2e1d9f7a4..."
+                  description:
+                    type: string
+                    example: "Fork of my-musicblocks-project"
+                  projectData:
+                    $ref: '#/components/schemas/ProjectData'
         "400":
           description: Missing `repositoryName`.
           content:
