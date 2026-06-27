@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { createRepo } from '../services/createRepo';
 import { createMetaData, generateKey, hashKey } from '../utils/hash';
 import { getRepoName } from '../utils/getRepoName';
+import db from '../utils/db';
 
 /**
  * POST /create
@@ -11,9 +12,11 @@ import { getRepoName } from '../utils/getRepoName';
  *
  * Body:
  *   projectData  {object} - the Music Blocks project JSON (required)
+ *   projectName  {string} - human-readable project name (optional; defaults to repoName)
  *   repoName     {string} - desired repo name (optional; defaults to ISO timestamp)
  *   theme        {string} - comma-separated topic tags (optional; defaults to 'default')
  *   description  {string} - repo description (optional)
+ *   creatorName  {string} - student display name (optional)
  *
  * Responses:
  *   200  { success, key, repository }  - repo created; `key` must be saved by the client
@@ -21,7 +24,7 @@ import { getRepoName } from '../utils/getRepoName';
  *   500  { error }    - GitHub API or other server error
  */
 export const handleCreateProject = async (req: Request, res: Response) => {
-    let { repoName, theme, description } = req.body;
+    let { repoName, theme, description, projectName, creatorName } = req.body;
     const { projectData } = req.body;
 
     if (!projectData) {
@@ -39,15 +42,44 @@ export const handleCreateProject = async (req: Request, res: Response) => {
     if (!description || typeof description !== 'string') {
         description = "Music Blocks project";
     }
+    if (!projectName || typeof projectName !== 'string' || projectName.trim() === '') {
+        projectName = repoName;
+    }
+    if (!creatorName || typeof creatorName !== 'string') {
+        creatorName = '';
+    }
 
     const key = generateKey();
     const hashedKey = hashKey(key);
-    const metadata = createMetaData(hashedKey, theme);
-    const sanitisedName = repoName.trim().replaceAll(' ', '_');
+    const metadata = createMetaData(hashedKey, theme, projectName, creatorName);
+    const sanitisedName = repoName.trim().replace(/[^a-zA-Z0-9._-]/g, '-');
+    const now = new Date().toISOString();
 
     try {
         const repoUrl = await createRepo(sanitisedName, projectData, metadata, description, theme);
         const repository = getRepoName(repoUrl);
+
+        // ── Insert SQLite row (visible=0 until student calls /publish) ──────────
+        // `createRepo` already ensures `repository` is unique on GitHub (UUID suffix
+        // appended on conflict), so INSERT OR REPLACE is safe: it creates a new row
+        // normally, and overwrites any stale SQLite entry if one somehow exists.
+        db.prepare(`
+            INSERT OR REPLACE INTO projects
+                (repoName, projectName, description, theme, creatorName,
+                 createdAt, updatedAt, likes, downloads,
+                 hasThumbnail, isMigrated, visible, hashedKey, isMusicBlocks)
+            VALUES (?, ?, ?, ?, ?, ?, ?, 0, 0, 0, 0, 0, ?, 1)
+        `).run(
+            repository,
+            projectName.trim(),
+            description,
+            theme,
+            creatorName,
+            now,
+            now,
+            hashedKey
+        );
+
         res.json({ success: true, key, repository });
     } catch (err) {
         console.error("[handleCreateProject]", err);

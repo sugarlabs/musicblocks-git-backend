@@ -4,7 +4,9 @@ import { getAuthenticatedOctokit } from "../utils/octokit";
 import { v4 as uuidv4 } from "uuid";
 
 export const forkRepo = async (
-    originalRepo: string
+    originalRepo: string,
+    creatorName: string = "",
+    projectName: string = ""
 ): Promise<{ repoName: string; key: string; projectData: string, description: string }> => {
     const octokit = await getAuthenticatedOctokit();
 
@@ -29,7 +31,7 @@ export const forkRepo = async (
     const key = generateKey();
     const hashedKey = hashKey(key);
     const forkMeta = {
-        ...createMetaData(hashedKey, originalMeta.theme || "default"),
+        ...createMetaData(hashedKey, originalMeta.theme || "default", projectName, creatorName),
         forkedFrom: `https://github.com/${config.org}/${originalRepo}`,
     };
     const uniqueRepoName = `fork-${originalRepo}-${uuidv4()}`;

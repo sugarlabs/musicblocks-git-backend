@@ -1,11 +1,13 @@
 import { Request, Response } from "express";
 import { updateProjectDataFile } from "../services/updateRepo";
+import db from "../utils/db";
 
 /**
  * PUT /edit
  *
  * Updates the projectData.json file inside a project's GitHub repository.
  * Requires verifyOwner middleware to have already confirmed the caller's key.
+ * Also updates `updatedAt` in SQLite so the browse/sort index stays in sync.
  *
  * Body:
  *   repoName     {string} - repository name in the org
@@ -22,7 +24,7 @@ export const handleEditProject = async (req: Request, res: Response) => {
 
     if (!commitMessage) {
         res.status(400).json({ message: "commitMessage is required" });
-        return; // ← prevent fall-through to the update call
+        return;
     }
 
     if (!repoName || typeof repoName !== 'string') {
@@ -32,6 +34,15 @@ export const handleEditProject = async (req: Request, res: Response) => {
 
     try {
         await updateProjectDataFile(repoName, projectData, commitMessage);
+
+        // ── Keep SQLite in sync: bump updatedAt ───────────────────────────────
+        try {
+            db.prepare(`UPDATE projects SET updatedAt = ? WHERE repoName = ?`)
+                .run(new Date().toISOString(), repoName);
+        } catch (dbErr) {
+            console.error('[handleEditProject] SQLite updatedAt sync failed:', dbErr);
+        }
+
         res.status(200).json({ message: "Project updated successfully" });
     } catch (error) {
         console.error("[handleEditProject] Error updating project:", error);
