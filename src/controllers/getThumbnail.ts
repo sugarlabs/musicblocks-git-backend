@@ -54,7 +54,6 @@ const getThumbnailStmt = db.prepare<[string], { png_data: Buffer; sha256_hash: s
     JOIN project_thumbnails pt ON pt.planet_id = p.planetId
     JOIN thumbnails t          ON t.sha256_hash = pt.sha256_hash
     WHERE p.repoName = ?
-      AND pt.classification = 'real'
 `);
 
 export const handleGetThumbnail = (req: Request, res: Response): void => {

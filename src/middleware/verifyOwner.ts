@@ -20,7 +20,7 @@ export const verifyOwner = async (req: Request, res: Response, next: NextFunctio
         const decoded = Buffer.from(metaFile.content, 'base64').toString();
         const metadata = JSON.parse(decoded);
         const incomingHash = hashKey(key);
-        if (incomingHash != metadata.hashedKey) {
+        if (incomingHash !== metadata.hashedKey) {
             res.status(403).json({ error: "Invalid key, permission denied" });
             return;
         }
