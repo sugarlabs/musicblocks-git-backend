@@ -1,4 +1,5 @@
 import express from 'express';
+import rateLimit from 'express-rate-limit';
 import { handleCreateProject } from '../controllers/createProject';
 import { verifyOwner } from '../middleware/verifyOwner';
 import { handleEditProject } from '../controllers/editProject';
@@ -21,24 +22,44 @@ import { handleReportProject } from '../controllers/reportProject';
 
 const projectRouter = express.Router();
 
+// ── Rate limiters ─────────────────────────────────────────────────────────────
+// Publish: max 10 per IP per hour to prevent scripted mass-publishing.
+const publishLimiter = rateLimit({
+    windowMs: 60 * 60 * 1000,   // 1 hour
+    max: 10,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { error: 'Too many publish requests from this IP. Limit: 10 per hour.' },
+});
+
+// Report: max 5 per IP per hour to prevent issue-flood attacks on mb-moderation repo.
+const reportLimiter = rateLimit({
+    windowMs: 60 * 60 * 1000,   // 1 hour
+    max: 5,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { error: 'Too many report requests from this IP. Limit: 5 per hour.' },
+});
+
+// ── Routes ────────────────────────────────────────────────────────────────────
 projectRouter.post('/create', handleCreateProject);
 projectRouter.post('/fork', handleForkProject);
-projectRouter.post('/forkHistory',handleForkWithHistory);
+projectRouter.post('/forkHistory', handleForkWithHistory);
 projectRouter.put('/edit', verifyOwner, handleEditProject);
 projectRouter.post('/create-pr', handleCreatePR);
-projectRouter.get('/openPR',handleGetOpenPullRequests);
-projectRouter.get("/commitHistory",handleGetCommits);
-projectRouter.get("/getProjectDataAtCommit",handleGetProjectDataWithCommit);
-projectRouter.get("/getProjectData",handleGetProjectData);
-projectRouter.get("/allRepos",handleGetProjects);
-projectRouter.get("/search", handleSearchProjects);
-projectRouter.get("/project/:repoName", handleGetProjectDetails);
-projectRouter.post("/like", handleLikeProject);
-projectRouter.get("/likes/:repoName", handleGetLikeCount);
+projectRouter.get('/openPR', handleGetOpenPullRequests);
+projectRouter.get('/commitHistory', handleGetCommits);
+projectRouter.get('/getProjectDataAtCommit', handleGetProjectDataWithCommit);
+projectRouter.get('/getProjectData', handleGetProjectData);
+projectRouter.get('/allRepos', handleGetProjects);
+projectRouter.get('/search', handleSearchProjects);
+projectRouter.get('/project/:repoName', handleGetProjectDetails);
+projectRouter.post('/like', handleLikeProject);
+projectRouter.get('/likes/:repoName', handleGetLikeCount);
 projectRouter.post('/createBranch', handleCreateBranch);
-projectRouter.get("/thumbnail/:repoName", handleGetThumbnail);
-projectRouter.get("/download/:repoName", handleDownloadProject);
-projectRouter.post("/publish", verifyOwner, handlePublishProject);
-projectRouter.post("/report", handleReportProject);
+projectRouter.get('/thumbnail/:repoName', handleGetThumbnail);
+projectRouter.get('/download/:repoName', handleDownloadProject);
+projectRouter.post('/publish', publishLimiter, verifyOwner, handlePublishProject);
+projectRouter.post('/report', reportLimiter, handleReportProject);
 
 export default projectRouter;
