@@ -1,9 +1,11 @@
+import { resolveRepoName } from "../utils/resolveRepoName";
 import { Request, Response } from "express";
 import { getLikeCount, likeProject } from "../services/likeProject";
 
 export const handleLikeProject = async (req: Request, res: Response) => {
     try {
-        const { repoName, userId, like } = req.body;
+        const { repoName: rawRepoName, userId, like  } = req.body;
+    const repoName = resolveRepoName(rawRepoName);
 
         if (
             typeof repoName !== 'string' ||
@@ -35,7 +37,8 @@ export const handleLikeProject = async (req: Request, res: Response) => {
 
 export const handleGetLikeCount = async (req: Request, res: Response) => {
     try {
-        const { repoName } = req.params;
+        const { repoName: rawRepoName } = req.params;
+    const repoName = resolveRepoName(rawRepoName);
         const result = getLikeCount(repoName);
 
         if (!result) {

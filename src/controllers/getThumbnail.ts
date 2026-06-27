@@ -1,3 +1,4 @@
+import { resolveRepoName } from "../utils/resolveRepoName";
 import { Request, Response } from "express";
 import db from "../utils/db";
 
@@ -58,7 +59,8 @@ const getThumbnailStmt = db.prepare<[string], { png_data: Buffer; sha256_hash: s
 
 export const handleGetThumbnail = (req: Request, res: Response): void => {
     try {
-        const { repoName } = req.params;
+        const { repoName: rawRepoName } = req.params;
+    const repoName = resolveRepoName(rawRepoName);
         if (!repoName || typeof repoName !== "string") {
             res.status(400).json({ message: "Invalid repoName" });
             return;

@@ -1,9 +1,11 @@
+import { resolveRepoName } from "../utils/resolveRepoName";
 import { Request, Response } from "express";
 import db from "../utils/db";
 
 export const handlePublishProject = (req: Request, res: Response) => {
     try {
-        const { repoName } = req.body;
+        const { repoName: rawRepoName } = req.body;
+    const repoName = resolveRepoName(rawRepoName);
         if (!repoName || typeof repoName !== "string") {
             res.status(400).json({ message: "Invalid repoName" });
             return;

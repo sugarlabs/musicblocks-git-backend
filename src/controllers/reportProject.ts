@@ -1,10 +1,12 @@
+import { resolveRepoName } from "../utils/resolveRepoName";
 import { Request, Response } from "express";
 import { getAuthenticatedOctokit } from "../utils/octokit";
 import { config } from "../config/gitConfig";
 
 export const handleReportProject = async (req: Request, res: Response) => {
     try {
-        const { repoName, description } = req.body;
+        const { repoName: rawRepoName, description  } = req.body;
+    const repoName = resolveRepoName(rawRepoName);
         if (!repoName || typeof repoName !== "string") {
             res.status(400).json({ message: "Invalid repoName" });
             return;
@@ -17,7 +19,7 @@ export const handleReportProject = async (req: Request, res: Response) => {
         const moderationRepo = process.env.MODERATION_REPO || "mb-moderation";
 
         const githubLink = `https://github.com/${config.org}/${repoName}`;
-        const musicblocksLink = `https://musicblocks.sugarlabs.org/?id=${encodeURIComponent(repoName)}`;
+        const musicblocksLink = `https://musicblocks.sugarlabs.org/index.html?id=${encodeURIComponent(repoName)}&run=True`;
 
         await octokit.rest.issues.create({
             owner: config.org as string,

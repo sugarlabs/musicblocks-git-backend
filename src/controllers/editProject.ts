@@ -1,3 +1,4 @@
+import { resolveRepoName } from "../utils/resolveRepoName";
 import { Request, Response } from "express";
 import { updateProjectDataFile } from "../services/updateRepo";
 import db from "../utils/db";
@@ -20,7 +21,8 @@ import db from "../utils/db";
  *   500  { error }    - GitHub API or other server error
  */
 export const handleEditProject = async (req: Request, res: Response) => {
-    const { repoName, projectData, commitMessage } = req.body;
+    const { repoName: rawRepoName, projectData, commitMessage  } = req.body;
+    const repoName = resolveRepoName(rawRepoName);
 
     if (!commitMessage) {
         res.status(400).json({ message: "commitMessage is required" });

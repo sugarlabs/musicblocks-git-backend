@@ -1,9 +1,11 @@
+import { resolveRepoName } from "../utils/resolveRepoName";
 import { Request, Response } from "express";
 import { getProjectDetails } from "../services/getProjectDetails";
 
 export const handleGetProjectDetails = async (req: Request, res: Response) => {
     try {
-        const { repoName } = req.params;
+        const { repoName: rawRepoName } = req.params;
+    const repoName = resolveRepoName(rawRepoName);
         const project = await getProjectDetails(repoName);
         
         if (!project) {

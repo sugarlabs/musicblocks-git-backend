@@ -1,9 +1,11 @@
+import { resolveRepoName } from "../utils/resolveRepoName";
 import { Request, Response } from "express";
 import { getCommitHistory } from "../services/getCommitHistory";
 
 export const handleGetCommits = async (req: Request, res: Response) => {
   try {
-    const repoName = req.query.repoName;
+    const rawRepoName = req.query.repoName;
+    const repoName = resolveRepoName(rawRepoName);
     if (!repoName || typeof repoName !== "string") {
       res.status(400).json({ message: "repoName query parameter is required" });
       return;

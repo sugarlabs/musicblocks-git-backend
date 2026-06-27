@@ -1,3 +1,4 @@
+import { resolveRepoName } from "../utils/resolveRepoName";
 import { Request, Response } from "express";
 import { getAuthenticatedOctokit } from "../utils/octokit";
 import { config } from "../config/gitConfig";
@@ -5,7 +6,8 @@ import db from "../utils/db";
 
 export const handleDownloadProject = async (req: Request, res: Response) => {
     try {
-        const { repoName } = req.params;
+        const { repoName: rawRepoName } = req.params;
+    const repoName = resolveRepoName(rawRepoName);
         if (!repoName || typeof repoName !== "string") {
             res.status(400).json({ message: "Invalid repoName" });
             return;
