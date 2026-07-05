@@ -8,7 +8,8 @@ export const createRepo = async (
   projectData: object,
   metaData: object,
   description: string,
-  theme: string
+  theme: string,
+  thumbnailDataUrl?: string
 ): Promise<string> => {
   const octokit = await getAuthenticatedOctokit();
   let uniqueRepoName = repoName;
@@ -62,7 +63,7 @@ export const createRepo = async (
 
   //writing files to repo
   const owner = config.org;
-  const filesToCreate = [
+  const filesToCreate: Array<{ path: string; content: string; encoded?: boolean }> = [
     {
       path: "projectData.json",
       content: JSON.stringify(projectData, null),
@@ -73,6 +74,17 @@ export const createRepo = async (
     },
   ];
 
+  const thumbnailMatch = typeof thumbnailDataUrl === "string"
+    ? thumbnailDataUrl.match(/^data:image\/png;base64,([A-Za-z0-9+/=]+)$/)
+    : null;
+  if (thumbnailMatch) {
+    filesToCreate.push({
+      path: "thumbnail.png",
+      content: thumbnailMatch[1],
+      encoded: true,
+    });
+  }
+
   await Promise.all(
     filesToCreate.map((file) =>
       octokit.request("PUT /repos/{owner}/{repo}/contents/{path}", {
@@ -80,7 +92,7 @@ export const createRepo = async (
         repo: uniqueRepoName,
         path: file.path,
         message: `Add ${file.path}`,
-        content: Buffer.from(file.content).toString("base64"),
+        content: file.encoded ? file.content : Buffer.from(file.content).toString("base64"),
       })
     )
   );
