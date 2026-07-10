@@ -1,0 +1,38 @@
+name: Run jest tests
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+    branches:
+      - main
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+      contents: read
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run Jest tests
+        id: jest
+        run: npm test || echo "FAILED = true" >> $GITHUB_ENV
+
+      - name: Comment PR
+        if: always()
+        uses: thollander/actions-comment-pull-request@v3
+        with:
+          message: |
+            ${{ env.FAILED == 'true' && '❌ Some Jest tests failed' || '✅ All Jest tests passed' }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
