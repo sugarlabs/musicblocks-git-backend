@@ -20,6 +20,12 @@ import { handleDownloadProject } from '../controllers/downloadProject';
 import { handlePublishProject } from '../controllers/publishProject';
 import { handleReportProject } from '../controllers/reportProject';
 
+import { handleDeleteProject } from '../controllers/deleteProject';
+import { handleSearchProjects } from '../controllers/searchProjects';
+import { handleMigratePlanet } from '../controllers/migratePlanet';
+import { handleGetTutorials } from '../controllers/getTutorials';
+import { handleCompareProjects } from '../controllers/compareProjects';
+
 const projectRouter = express.Router();
 
 // ── Rate limiters ─────────────────────────────────────────────────────────────
@@ -57,6 +63,12 @@ projectRouter.get('/project/:repoName', handleGetProjectDetails);
 projectRouter.post('/like', handleLikeProject);
 projectRouter.get('/likes/:repoName', handleGetLikeCount);
 projectRouter.post('/createBranch', handleCreateBranch);
+
+projectRouter.delete('/delete', verifyOwner, handleDeleteProject);
+projectRouter.get('/search', handleSearchProjects);
+projectRouter.post('/migrate-planet', handleMigratePlanet);
+projectRouter.get('/tutorials', handleGetTutorials);
+projectRouter.get('/compare', handleCompareProjects);
 projectRouter.get('/thumbnail/:repoName', handleGetThumbnail);
 projectRouter.get('/download/:repoName', handleDownloadProject);
 projectRouter.post('/publish', publishLimiter, verifyOwner, handlePublishProject);
