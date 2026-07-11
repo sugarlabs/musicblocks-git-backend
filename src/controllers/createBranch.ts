@@ -3,7 +3,6 @@ import { createBranch } from '../services/createBranch';
 
 export const handleCreateBranch = async (req: Request, res: Response): Promise<void> => {
     const { repoName, branchName, branchedFrom = 'main' } = req.body;
-    console.log("in creating a branch");
 
     if (!repoName || !branchName) {
         res.status(400).json({ error: "Missing required fields: repoName, branchName" });
