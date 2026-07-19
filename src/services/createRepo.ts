@@ -32,17 +32,18 @@ export const createRepo = async (
         "X-GitHub-Api-Version": "2022-11-28",
       },
     });
-  } catch (err: unknown) {
+  } catch (err: any) {
     // unique repo name if name already exist
-    if (
-      typeof err === "object" &&
-      err !== null &&
-      "status" in err &&
-      (err as { status: number }).status == 422 &&
-      "message" in err &&
-      typeof (err as { message: string }).message === "string" &&
-      (err as { message: string }).message.includes("name already exists")
-    ) {
+    let isNameTaken = false;
+    if (err && err.status === 422) {
+      if (err.response && err.response.data && Array.isArray(err.response.data.errors)) {
+        isNameTaken = err.response.data.errors.some((e: any) => e.message && e.message.includes("name already exists"));
+      } else if (err.message && err.message.includes("name already exists")) {
+        isNameTaken = true;
+      }
+    }
+
+    if (isNameTaken) {
       uniqueRepoName = `${repoName}-${uuidv4()}`;
       repo = await octokit.request(`POST /orgs/{org}/repos`, {
         org: config.org,
