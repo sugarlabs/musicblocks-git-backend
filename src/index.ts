@@ -25,8 +25,15 @@ const corsOrigin = process.env.CORS_ORIGIN || '*';
 app.use(cors({ origin: corsOrigin }));
 app.use(express.json({ limit: '10mb' }));
 
+// ── Health check — used by the frontend NetworkMonitor probe ────────────────
+// NetworkMonitor sends a HEAD /health every 30 s to detect real connectivity.
+// Must respond quickly (no DB or GitHub I/O). Returns 200 so fetch() succeeds.
+app.head('/health', (_req: Request, res: Response): void => { res.sendStatus(200); });
+app.get('/health',  (_req: Request, res: Response): void => { res.status(200).json({ status: 'ok' }); });
+
 // ── Routes ──────────────────────────────────────────────────────────────────
 app.use('/api/github', projectRouter);
+
 
 // ── Global error handler ────────────────────────────────────────────────────
 // Catches any error thrown inside a middleware or route handler that wasn't
