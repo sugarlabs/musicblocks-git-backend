@@ -25,7 +25,7 @@ import db from '../utils/db';
  */
 export const handleCreateProject = async (req: Request, res: Response) => {
     let { repoName, theme, description, projectName, creatorName } = req.body;
-    const { projectData } = req.body;
+    const { projectData, thumbnail, ProjectImage } = req.body;
 
     if (!projectData) {
         res.status(400).json({ message: "projectData is required" });
@@ -54,9 +54,14 @@ export const handleCreateProject = async (req: Request, res: Response) => {
     const metadata = createMetaData(hashedKey, theme, projectName, creatorName);
     const sanitisedName = repoName.trim().replace(/[^a-zA-Z0-9._-]/g, '-');
     const now = new Date().toISOString();
+    const rawThumbnail = typeof thumbnail === 'string' ? thumbnail : ProjectImage;
+    const thumbnailDataUrl = typeof rawThumbnail === 'string' && /^data:image\/png;base64,/.test(rawThumbnail)
+        ? rawThumbnail
+        : undefined;
+    const hasThumbnail = thumbnailDataUrl ? 1 : 0;
 
     try {
-        const repoUrl = await createRepo(sanitisedName, projectData, metadata, description, theme);
+        const repoUrl = await createRepo(sanitisedName, projectData, metadata, description, theme, thumbnailDataUrl);
         const repository = getRepoName(repoUrl);
 
         // ── Insert SQLite row (visible=0 until student calls /publish) ──────────
@@ -68,7 +73,7 @@ export const handleCreateProject = async (req: Request, res: Response) => {
                 (repoName, projectName, description, theme, creatorName,
                  createdAt, updatedAt, likes, downloads,
                  hasThumbnail, isMigrated, visible, hashedKey, isMusicBlocks)
-            VALUES (?, ?, ?, ?, ?, ?, ?, 0, 0, 0, 0, 0, ?, 1)
+            VALUES (?, ?, ?, ?, ?, ?, ?, 0, 0, ?, 0, 0, ?, 1)
         `).run(
             repository,
             projectName.trim(),
@@ -77,6 +82,7 @@ export const handleCreateProject = async (req: Request, res: Response) => {
             creatorName,
             now,
             now,
+            hasThumbnail,
             hashedKey
         );
 

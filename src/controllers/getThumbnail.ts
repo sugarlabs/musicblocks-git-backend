@@ -1,6 +1,8 @@
 import { resolveRepoName } from "../utils/resolveRepoName";
 import { Request, Response } from "express";
 import db from "../utils/db";
+import { config } from "../config/gitConfig";
+import { getAuthenticatedOctokit } from "../utils/octokit";
 
 /**
  * GET /thumbnail/:repoName
@@ -57,7 +59,47 @@ const getThumbnailStmt = db.prepare<[string], { png_data: Buffer; sha256_hash: s
     WHERE p.repoName = ?
 `);
 
-export const handleGetThumbnail = (req: Request, res: Response): void => {
+async function sendGithubThumbnail(repoName: string, req: Request, res: Response): Promise<void> {
+    try {
+        const octokit = await getAuthenticatedOctokit();
+        const response = await octokit.request("GET /repos/{owner}/{repo}/contents/{path}", {
+            owner: config.org,
+            repo: repoName,
+            path: "thumbnail.png",
+            headers: {
+                "X-GitHub-Api-Version": "2022-11-28",
+            },
+        });
+
+        const file = response.data as { content?: string; sha?: string };
+        if (!file.content) {
+            res.status(404).json({ message: "Thumbnail not found" });
+            return;
+        }
+
+        const image = Buffer.from(file.content.replace(/\n/g, ""), "base64");
+        const etag = `"github-${(file.sha || repoName).slice(0, 16)}"`;
+
+        if (req.headers["if-none-match"] === etag) {
+            res.status(304).end();
+            return;
+        }
+
+        res.setHeader("Content-Type", detectMimeType(image));
+        res.setHeader("ETag", etag);
+        res.setHeader("Cache-Control", "public, max-age=3600, stale-while-revalidate=86400");
+        res.setHeader("Content-Length", image.length.toString());
+        res.status(200).send(image);
+    } catch (error: any) {
+        if (error?.status === 404) {
+            res.status(404).json({ message: "Thumbnail not found" });
+            return;
+        }
+        throw error;
+    }
+}
+
+export const handleGetThumbnail = async (req: Request, res: Response): Promise<void> => {
     try {
         const { repoName: rawRepoName } = req.params;
     const repoName = resolveRepoName(rawRepoName);
@@ -69,8 +111,7 @@ export const handleGetThumbnail = (req: Request, res: Response): void => {
         const row = getThumbnailStmt.get(repoName);
 
         if (!row || !row.png_data) {
-            // No thumbnail available — 404 lets the frontend swap in a placeholder.
-            res.status(404).json({ message: "Thumbnail not found" });
+            await sendGithubThumbnail(repoName, req, res);
             return;
         }
 

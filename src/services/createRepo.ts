@@ -8,7 +8,8 @@ export const createRepo = async (
   projectData: object,
   metaData: object,
   description: string,
-  theme: string
+  theme: string,
+  thumbnailDataUrl?: string
 ): Promise<string> => {
   const octokit = await getAuthenticatedOctokit();
   let uniqueRepoName = repoName;
@@ -31,17 +32,18 @@ export const createRepo = async (
         "X-GitHub-Api-Version": "2022-11-28",
       },
     });
-  } catch (err: unknown) {
+  } catch (err: any) {
     // unique repo name if name already exist
-    if (
-      typeof err === "object" &&
-      err !== null &&
-      "status" in err &&
-      (err as { status: number }).status == 422 &&
-      "message" in err &&
-      typeof (err as { message: string }).message === "string" &&
-      (err as { message: string }).message.includes("name already exists")
-    ) {
+    let isNameTaken = false;
+    if (err && err.status === 422) {
+      if (err.response && err.response.data && Array.isArray(err.response.data.errors)) {
+        isNameTaken = err.response.data.errors.some((e: any) => e.message && e.message.includes("name already exists"));
+      } else if (err.message && err.message.includes("name already exists")) {
+        isNameTaken = true;
+      }
+    }
+
+    if (isNameTaken) {
       uniqueRepoName = `${repoName}-${uuidv4()}`;
       repo = await octokit.request(`POST /orgs/{org}/repos`, {
         org: config.org,
@@ -62,7 +64,7 @@ export const createRepo = async (
 
   //writing files to repo
   const owner = config.org;
-  const filesToCreate = [
+  const filesToCreate: Array<{ path: string; content: string; encoded?: boolean }> = [
     {
       path: "projectData.json",
       content: JSON.stringify(projectData, null),
@@ -73,6 +75,17 @@ export const createRepo = async (
     },
   ];
 
+  const thumbnailMatch = typeof thumbnailDataUrl === "string"
+    ? thumbnailDataUrl.match(/^data:image\/png;base64,([A-Za-z0-9+/=]+)$/)
+    : null;
+  if (thumbnailMatch) {
+    filesToCreate.push({
+      path: "thumbnail.png",
+      content: thumbnailMatch[1],
+      encoded: true,
+    });
+  }
+
   await Promise.all(
     filesToCreate.map((file) =>
       octokit.request("PUT /repos/{owner}/{repo}/contents/{path}", {
@@ -80,7 +93,7 @@ export const createRepo = async (
         repo: uniqueRepoName,
         path: file.path,
         message: `Add ${file.path}`,
-        content: Buffer.from(file.content).toString("base64"),
+        content: file.encoded ? file.content : Buffer.from(file.content).toString("base64"),
       })
     )
   );

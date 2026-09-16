@@ -77,10 +77,17 @@ export const forkRepo = async (
 
     const description = response.data.description || "";
 
+    // Encode projectData the same way getProjectData.ts does for Format A
+    // (raw JSON object → base64+URI-encoded string) so the frontend's
+    // decodeTB() can consume it directly.
+    const encodedProjectData = Buffer
+        .from(encodeURIComponent(JSON.stringify(projectData)))
+        .toString("base64");
+
     return {
         repoName: uniqueRepoName,
         key,
-        projectData,
+        projectData: encodedProjectData,
         description,
     };
 };

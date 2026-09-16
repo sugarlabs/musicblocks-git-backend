@@ -19,6 +19,7 @@ import { handleGetThumbnail } from '../controllers/getThumbnail';
 import { handleDownloadProject } from '../controllers/downloadProject';
 import { handlePublishProject } from '../controllers/publishProject';
 import { handleReportProject } from '../controllers/reportProject';
+import { handleGetTagManifest } from '../controllers/getTagManifest';
 
 const projectRouter = express.Router();
 
@@ -53,6 +54,7 @@ projectRouter.get('/getProjectDataAtCommit', handleGetProjectDataWithCommit);
 projectRouter.get('/getProjectData', handleGetProjectData);
 projectRouter.get('/allRepos', handleGetProjects);
 projectRouter.get('/search', handleSearchProjects);
+projectRouter.get('/tagManifest', handleGetTagManifest);
 projectRouter.get('/project/:repoName', handleGetProjectDetails);
 projectRouter.post('/like', handleLikeProject);
 projectRouter.get('/likes/:repoName', handleGetLikeCount);
