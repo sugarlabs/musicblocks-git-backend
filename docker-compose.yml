@@ -13,7 +13,7 @@ services:
       # SQLite database — persisted across container restarts/upgrades
       - sqlite_data:/var/lib/musicblocks
       # GitHub App private key — mounted read-only from the host
-      - /etc/musicblocks/private-key.pem:/etc/musicblocks/private-key.pem:ro
+      - /home/zealot/secrets/private-key.pem:/etc/musicblocks/private-key.pem:ro
     logging:
       driver: "json-file"
       options:
