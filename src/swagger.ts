@@ -4,7 +4,11 @@ import fs from 'fs';
 import path from 'path';
 import yaml from 'js-yaml';
 
-const swaggerFilePath = path.resolve(process.cwd(), 'src', 'openapi.yaml');
+// __dirname resolves to dist/ at runtime (after tsc).
+// The build script copies src/openapi.yaml → dist/openapi.yaml so this works
+// in Docker and in any compiled deployment. process.cwd()+'src/' only works
+// in ts-node local dev mode.
+const swaggerFilePath = path.resolve(__dirname, 'openapi.yaml');
 
 if (!fs.existsSync(swaggerFilePath)) {
   throw new Error(`Swagger file not found at ${swaggerFilePath}`);
