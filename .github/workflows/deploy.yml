@@ -1,16 +1,19 @@
 name: Build & Deploy
 
+# Triggers on every push to main — including when PR #26 is merged
+# into sugarlabs/musicblocks-git-backend.
 on:
   push:
     branches: [main]
 
 jobs:
-  # ── Job 1: Build Docker image and push to GitHub Container Registry ─────────
+  # ── Job 1: Build Docker image and push to GitHub Container Registry ──────────
+  # GITHUB_TOKEN is provided automatically — no secrets needed for this step.
   build-and-push:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      packages: write         # needed to push to ghcr.io
+      packages: write         # required to push to ghcr.io/<org>/
 
     steps:
       - uses: actions/checkout@v4
@@ -20,7 +23,7 @@ jobs:
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}   # auto-provided, no setup needed
+          password: ${{ secrets.GITHUB_TOKEN }}  # auto-provided, no setup needed
 
       - name: Build and push image
         uses: docker/build-push-action@v5
@@ -31,19 +34,38 @@ jobs:
             ghcr.io/sugarlabs/musicblocks-git-backend:latest
             ghcr.io/sugarlabs/musicblocks-git-backend:${{ github.sha }}
 
-  # ── Job 2: SSH into the VM and pull the new image ───────────────────────────
+  # ── Job 2: SSH into the VM and redeploy ──────────────────────────────────────
+  # Requires three secrets set in sugarlabs/musicblocks-git-backend repo settings:
+  #   DEPLOY_HOST     → containers.sugarlabs.org
+  #   DEPLOY_USER     → zealot
+  #   DEPLOY_SSH_KEY  → contents of the zealot private key (~/.ssh/id_ed25519)
+  #
+  # Until the secrets are configured this job will be skipped (if: condition).
+  # The container on the VM keeps running unaffected.
   deploy:
-    needs: build-and-push      # only runs after the image is pushed
+    needs: build-and-push
     runs-on: ubuntu-latest
+    # Skip gracefully if secrets haven't been added yet
+    if: ${{ secrets.DEPLOY_HOST != '' }}
 
     steps:
-      - name: Deploy to server
+      - name: Deploy to containers.sugarlabs.org
         uses: appleboy/ssh-action@v1
         with:
           host: ${{ secrets.DEPLOY_HOST }}
           username: ${{ secrets.DEPLOY_USER }}
           key: ${{ secrets.DEPLOY_SSH_KEY }}
           script: |
-            cd /opt/musicblocks-backend
+            cd /home/zealot/musicblocks-git-backend
+
+            # Pull the freshly-built image from GHCR
             docker compose pull
+
+            # Replace the running container with zero-downtime rolling restart
             docker compose up -d --remove-orphans
+
+            # Confirm the new container is healthy
+            sleep 10
+            docker compose ps
+            curl -sf http://127.0.0.1:5001/health || exit 1
+            echo "Deploy successful"

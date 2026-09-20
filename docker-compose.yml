@@ -2,7 +2,10 @@ version: "3.9"
 
 services:
   backend:
-    build: .                    # Build from source (branch clone on the VM)
+    # Image built and pushed by GitHub Actions on every push to main.
+    # For the very first manual deploy (before CI secrets are set), run:
+    #   docker compose build && docker compose up -d
+    image: ghcr.io/sugarlabs/musicblocks-git-backend:latest
     container_name: mb-backend
     restart: unless-stopped
     ports:
