@@ -1,0 +1,24 @@
+version: "3.9"
+
+services:
+  backend:
+    build: .                    # Build from source (branch clone on the VM)
+    container_name: mb-backend
+    restart: unless-stopped
+    ports:
+      # Only bind to localhost — nginx on the VM proxies public traffic here
+      - "127.0.0.1:5001:5001"
+    env_file: .env
+    volumes:
+      # SQLite database — persisted across container restarts/upgrades
+      - sqlite_data:/var/lib/musicblocks
+      # GitHub App private key — mounted read-only from the host
+      - /etc/musicblocks/private-key.pem:/etc/musicblocks/private-key.pem:ro
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+volumes:
+  sqlite_data:
