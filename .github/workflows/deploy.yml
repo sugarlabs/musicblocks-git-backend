@@ -45,8 +45,9 @@ jobs:
   deploy:
     needs: build-and-push
     runs-on: ubuntu-latest
-    # Skip gracefully if secrets haven't been added yet
-    if: ${{ secrets.DEPLOY_HOST != '' }}
+    # NOTE: This job requires 3 secrets to be configured in the repo settings:
+    #   DEPLOY_HOST, DEPLOY_USER, DEPLOY_SSH_KEY
+    # Until they are set, this job will fail (build-and-push above still succeeds).
 
     steps:
       - name: Deploy to containers.sugarlabs.org
