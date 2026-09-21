@@ -13,7 +13,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      packages: write         # required to push to ghcr.io/<org>/
+      packages: write         # required to push to ghcr.io/sugarlabs/
 
     steps:
       - uses: actions/checkout@v4
@@ -30,6 +30,7 @@ jobs:
         with:
           context: .
           push: true
+          provenance: false        # disables BuildKit attestations — required for GHCR org repos
           tags: |
             ghcr.io/sugarlabs/musicblocks-git-backend:latest
             ghcr.io/sugarlabs/musicblocks-git-backend:${{ github.sha }}
@@ -59,7 +60,7 @@ jobs:
           script: |
             cd /home/zealot/musicblocks-git-backend
 
-            # Pull the freshly-built image from GHCR
+            # Pull the freshly-built image from GHCR (zealot-zew personal registry)
             docker compose pull
 
             # Replace the running container with zero-downtime rolling restart
