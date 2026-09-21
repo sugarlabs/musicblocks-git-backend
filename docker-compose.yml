@@ -1,0 +1,27 @@
+version: "3.9"
+
+services:
+  backend:
+    # Image built and pushed by GitHub Actions on every push to main.
+    # For the very first manual deploy (before CI secrets are set), run:
+    #   docker compose build && docker compose up -d
+    image: ghcr.io/sugarlabs/musicblocks-git-backend:latest
+    container_name: mb-backend
+    restart: unless-stopped
+    ports:
+      # Only bind to localhost — nginx on the VM proxies public traffic here
+      - "127.0.0.1:5001:5001"
+    env_file: .env
+    volumes:
+      # SQLite database — persisted across container restarts/upgrades
+      - sqlite_data:/var/lib/musicblocks
+      # GitHub App private key — mounted read-only from the host
+      - /home/zealot/secrets/private-key.pem:/etc/musicblocks/private-key.pem:ro
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+volumes:
+  sqlite_data:

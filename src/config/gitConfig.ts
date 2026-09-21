@@ -5,10 +5,16 @@ import path from 'path';
 dotenv.config();
 
 let privateKey = "";
+// In production, set GITHUB_APP_PRIVATE_KEY_PATH to wherever the key is mounted
+// (e.g. /etc/musicblocks/private-key.pem inside the container).
+// Falls back to dist/config/private-key.pem for local dev.
+const pemPath =
+  process.env.GITHUB_APP_PRIVATE_KEY_PATH ??
+  path.resolve(__dirname, 'private-key.pem');
 try {
-  privateKey = fs.readFileSync(path.resolve(__dirname,'../../src/config', './private-key.pem'), "utf-8");
+  privateKey = fs.readFileSync(pemPath, "utf-8");
 } catch(err) {
-  console.warn("Warning: private-key.pem not found. GitHub integrations will fail.");
+  console.warn(`Warning: private-key.pem not found at "${pemPath}". GitHub App auth will fail.`);
 }
 
 export const config = {

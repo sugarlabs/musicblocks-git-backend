@@ -1,13 +1,23 @@
 import Database from 'better-sqlite3';
 import path from 'path';
 
-// SQLITE_PATH env var overrides for production (e.g. Sunjammer).
+import fs from 'fs';
+
+// SQLITE_PATH env var overrides for production (e.g. Sunjammer / Docker volume).
 // Locally it falls back to Gitbased/projects.sqlite (the sibling folder).
 const dbPath = process.env.SQLITE_PATH
     || path.resolve(__dirname, '../../../projects.sqlite');
 
+// Ensure the parent directory exists (e.g. /var/lib/musicblocks on a fresh volume)
+const dbDir = path.dirname(dbPath);
+if (!fs.existsSync(dbDir)) {
+    fs.mkdirSync(dbDir, { recursive: true });
+}
+
+// fileMustExist: false — creates the DB file on first boot if the migration
+// hasn't run yet. The migration will populate real project data later.
 const db = new Database(dbPath, {
-    fileMustExist: true,
+    fileMustExist: false,
     verbose: process.env.SQLITE_VERBOSE === '1' ? console.log : undefined,
 });
 
@@ -20,15 +30,26 @@ db.pragma('busy_timeout = 5000');
 // (projects_ai, projects_au, projects_ad). We do NOT recreate them here
 // to avoid column-mismatch or duplicate-trigger errors.
 const ensureProjectsTableExists = () => {
-    const table = db.prepare(`
-        SELECT name
-        FROM sqlite_master
-        WHERE type = 'table' AND name = 'projects'
-    `).get();
-
-    if (!table) {
-        throw new Error(`SQLite database at ${dbPath} does not contain a projects table`);
-    }
+    // Create a minimal projects table if the migration hasn't run yet.
+    // The migration will later populate this with real data (INSERT OR REPLACE).
+    // This allows the backend to boot cleanly on a fresh Docker volume.
+    db.exec(`
+        CREATE TABLE IF NOT EXISTS projects (
+            repoName    TEXT PRIMARY KEY,
+            title       TEXT NOT NULL DEFAULT '',
+            description TEXT NOT NULL DEFAULT '',
+            author      TEXT NOT NULL DEFAULT '',
+            tags        TEXT NOT NULL DEFAULT '',
+            likes       INTEGER NOT NULL DEFAULT 0,
+            downloads   INTEGER NOT NULL DEFAULT 0,
+            visible     INTEGER NOT NULL DEFAULT 1,
+            createdAt   TEXT NOT NULL DEFAULT (datetime('now')),
+            updatedAt   TEXT NOT NULL DEFAULT (datetime('now')),
+            githubUrl   TEXT NOT NULL DEFAULT '',
+            planetId    TEXT,
+            hashedKey   TEXT NOT NULL DEFAULT ''
+        );
+    `);
 };
 
 const initializeIndexes = () => {
