@@ -13,7 +13,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      packages: write         # required to push to ghcr.io/<org>/
+      packages: write         # required to push to ghcr.io/sugarlabs/
 
     steps:
       - uses: actions/checkout@v4
@@ -31,8 +31,8 @@ jobs:
           context: .
           push: true
           tags: |
-            ghcr.io/zealot-zew/musicblocks-git-backend:latest
-            ghcr.io/zealot-zew/musicblocks-git-backend:${{ github.sha }}
+            ghcr.io/sugarlabs/musicblocks-git-backend:latest
+            ghcr.io/sugarlabs/musicblocks-git-backend:${{ github.sha }}
 
   # ── Job 2: SSH into the VM and redeploy ──────────────────────────────────────
   # Requires three secrets set in sugarlabs/musicblocks-git-backend repo settings:
