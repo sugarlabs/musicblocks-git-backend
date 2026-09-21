@@ -31,8 +31,8 @@ jobs:
           context: .
           push: true
           tags: |
-            ghcr.io/sugarlabs/musicblocks-git-backend:latest
-            ghcr.io/sugarlabs/musicblocks-git-backend:${{ github.sha }}
+            ghcr.io/zealot-zew/musicblocks-git-backend:latest
+            ghcr.io/zealot-zew/musicblocks-git-backend:${{ github.sha }}
 
   # ── Job 2: SSH into the VM and redeploy ──────────────────────────────────────
   # Requires three secrets set in sugarlabs/musicblocks-git-backend repo settings:
@@ -59,7 +59,7 @@ jobs:
           script: |
             cd /home/zealot/musicblocks-git-backend
 
-            # Pull the freshly-built image from GHCR
+            # Pull the freshly-built image from GHCR (zealot-zew personal registry)
             docker compose pull
 
             # Replace the running container with zero-downtime rolling restart
