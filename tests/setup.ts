@@ -1,5 +1,8 @@
 import { jest } from '@jest/globals';
 
+// src/utils/db.ts opens SQLITE_PATH (default: a projects.sqlite outside the repo) as soon as it is imported. Tests must never write a real database file.
+process.env.SQLITE_PATH = ':memory:';
+
 global.console = {
   ...console,
   debug: jest.fn(),
