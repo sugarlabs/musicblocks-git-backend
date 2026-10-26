@@ -17,5 +17,5 @@ export const getCommitHistory = async (repoName: string) => {
             },
         }
     );
-    return response;
+    return response.data;
 };
