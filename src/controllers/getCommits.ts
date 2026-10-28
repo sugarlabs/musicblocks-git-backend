@@ -10,8 +10,8 @@ export const handleGetCommits = async (req: Request, res: Response) => {
       res.status(400).json({ message: "repoName query parameter is required" });
       return;
     }
-    const response = await getCommitHistory(repoName);
-    res.status(200).json(response);
+    const commits = await getCommitHistory(repoName);
+    res.status(200).json(commits);
   } catch (error) {
     console.error('[handleGetCommits]', error);
     res.status(500).json({ error: "Failed to fetch commit history" });
