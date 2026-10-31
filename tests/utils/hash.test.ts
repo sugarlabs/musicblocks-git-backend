@@ -120,14 +120,18 @@ describe('Hash Utilities', () => {
 
   describe('createMetaData', () => {
     it('should create metadata with current timestamp and provided values', () => {
-      const mockDate = new Date('2024-01-01T12:00:00.000Z');
-      jest.spyOn(global, 'Date').mockImplementation(() => mockDate as never);
+      jest.spyOn(global, 'Date').mockImplementation(() => ({ toISOString: () => '2024-01-01T12:00:00.000Z' } as Date));
 
       const result = createMetaData('test-hash', 'piano');
 
       expect(result).toEqual({
+        projectName: '',
         createdAt: '2024-01-01T12:00:00.000Z',
+        updatedAt: '2024-01-01T12:00:00.000Z',
         theme: 'piano',
+        originalCreator: 'anonymous',
+        isMigrated: false,
+        isMusicBlocks: true,
         hashedKey: 'test-hash'
       });
 
@@ -135,8 +139,7 @@ describe('Hash Utilities', () => {
     });
 
     it('should handle different themes', () => {
-      const mockDate = new Date('2024-01-01T12:00:00.000Z');
-      jest.spyOn(global, 'Date').mockImplementation(() => mockDate as never);
+      jest.spyOn(global, 'Date').mockImplementation(() => ({ toISOString: () => '2024-01-01T12:00:00.000Z' } as Date));
 
       const result1 = createMetaData('hash1', 'guitar');
       const result2 = createMetaData('hash2', 'drums');
@@ -150,14 +153,18 @@ describe('Hash Utilities', () => {
     });
 
     it('should handle empty theme strings', () => {
-      const mockDate = new Date('2024-01-01T12:00:00.000Z');
-      jest.spyOn(global, 'Date').mockImplementation(() => mockDate as never);
+      jest.spyOn(global, 'Date').mockImplementation(() => ({ toISOString: () => '2024-01-01T12:00:00.000Z' } as Date));
 
       const result = createMetaData('test-hash', '');
 
       expect(result).toEqual({
+        projectName: '',
         createdAt: '2024-01-01T12:00:00.000Z',
-        theme: '',
+        updatedAt: '2024-01-01T12:00:00.000Z',
+        theme: 'default',
+        originalCreator: 'anonymous',
+        isMigrated: false,
+        isMusicBlocks: true,
         hashedKey: 'test-hash'
       });
 
@@ -165,15 +172,19 @@ describe('Hash Utilities', () => {
     });
 
     it('should handle special characters in theme', () => {
-      const mockDate = new Date('2024-01-01T12:00:00.000Z');
-      jest.spyOn(global, 'Date').mockImplementation(() => mockDate as never);
+      jest.spyOn(global, 'Date').mockImplementation(() => ({ toISOString: () => '2024-01-01T12:00:00.000Z' } as Date));
 
       const specialTheme = 'rock & roll!';
       const result = createMetaData('test-hash', specialTheme);
 
       expect(result).toEqual({
+        projectName: '',
         createdAt: '2024-01-01T12:00:00.000Z',
+        updatedAt: '2024-01-01T12:00:00.000Z',
         theme: 'rock & roll!',
+        originalCreator: 'anonymous',
+        isMigrated: false,
+        isMusicBlocks: true,
         hashedKey: 'test-hash'
       });
 
@@ -185,8 +196,8 @@ describe('Hash Utilities', () => {
       const mockDate2 = new Date('2024-01-01T12:01:00.000Z');
       
       jest.spyOn(global, 'Date')
-        .mockImplementationOnce(() => mockDate1 as never)
-        .mockImplementationOnce(() => mockDate2 as never);
+        .mockImplementationOnce(() => ({ toISOString: () => mockDate1.toISOString() } as Date))
+        .mockImplementationOnce(() => ({ toISOString: () => mockDate2.toISOString() } as Date));
 
       const result1 = createMetaData('hash1', 'theme1');
       const result2 = createMetaData('hash2', 'theme2');
@@ -209,7 +220,7 @@ describe('Hash Utilities', () => {
 
       (mockCrypto.randomBytes as unknown as jest.MockedFunction<() => Buffer>).mockReturnValue(mockRandomBytes);
       mockCrypto.createHash.mockReturnValue(mockHash as never);
-      jest.spyOn(global, 'Date').mockImplementation(() => mockDate as never);
+      jest.spyOn(global, 'Date').mockImplementation(() => ({ toISOString: () => mockDate.toISOString() } as Date));
 
       const key = generateKey();
       const hashedKey = hashKey(key);
@@ -218,8 +229,13 @@ describe('Hash Utilities', () => {
       expect(key).toBe('746573742d72616e646f6d2d62797465732d33322d63686172732d6c6f6e67');
       expect(hashedKey).toBe('hashed-key-result');
       expect(metadata).toEqual({
+        projectName: '',
         createdAt: '2024-01-01T12:00:00.000Z',
+        updatedAt: '2024-01-01T12:00:00.000Z',
         theme: 'jazz',
+        originalCreator: 'anonymous',
+        isMigrated: false,
+        isMusicBlocks: true,
         hashedKey: 'hashed-key-result'
       });
 
