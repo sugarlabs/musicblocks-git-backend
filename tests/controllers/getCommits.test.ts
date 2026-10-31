@@ -94,7 +94,7 @@ describe('handleGetCommits', () => {
       await handleGetCommits(mockRequest as Request, mockResponse as Response);
 
       expect(mockStatus).toHaveBeenCalledWith(400);
-      expect(mockJson).toHaveBeenCalledWith({ message: 'no reponame' });
+      expect(mockJson).toHaveBeenCalledWith({ message: 'repoName query parameter is required' });
       expect(mockGetCommitHistory).not.toHaveBeenCalled();
     });
 
@@ -108,7 +108,7 @@ describe('handleGetCommits', () => {
       await handleGetCommits(mockRequest as Request, mockResponse as Response);
 
       expect(mockStatus).toHaveBeenCalledWith(400);
-      expect(mockJson).toHaveBeenCalledWith({ message: 'no reponame' });
+      expect(mockJson).toHaveBeenCalledWith({ message: 'repoName query parameter is required' });
       expect(mockGetCommitHistory).not.toHaveBeenCalled();
     });
 
@@ -121,7 +121,7 @@ describe('handleGetCommits', () => {
       await handleGetCommits(mockRequest as Request, mockResponse as Response);
 
       expect(mockStatus).toHaveBeenCalledWith(400);
-      expect(mockJson).toHaveBeenCalledWith({ message: 'no reponame' });
+      expect(mockJson).toHaveBeenCalledWith({ message: 'repoName query parameter is required' });
       expect(mockGetCommitHistory).not.toHaveBeenCalled();
     });
 
@@ -135,7 +135,7 @@ describe('handleGetCommits', () => {
       await handleGetCommits(mockRequest as Request, mockResponse as Response);
 
       expect(mockStatus).toHaveBeenCalledWith(400);
-      expect(mockJson).toHaveBeenCalledWith({ message: 'no reponame' });
+      expect(mockJson).toHaveBeenCalledWith({ message: 'repoName query parameter is required' });
       expect(mockGetCommitHistory).not.toHaveBeenCalled();
     });
 
@@ -149,7 +149,7 @@ describe('handleGetCommits', () => {
       await handleGetCommits(mockRequest as Request, mockResponse as Response);
 
       expect(mockStatus).toHaveBeenCalledWith(400);
-      expect(mockJson).toHaveBeenCalledWith({ message: 'no reponame' });
+      expect(mockJson).toHaveBeenCalledWith({ message: 'repoName query parameter is required' });
       expect(mockGetCommitHistory).not.toHaveBeenCalled();
     });
 
@@ -163,7 +163,7 @@ describe('handleGetCommits', () => {
       await handleGetCommits(mockRequest as Request, mockResponse as Response);
 
       expect(mockStatus).toHaveBeenCalledWith(400);
-      expect(mockJson).toHaveBeenCalledWith({ message: 'no reponame' });
+      expect(mockJson).toHaveBeenCalledWith({ message: 'repoName query parameter is required' });
       expect(mockGetCommitHistory).not.toHaveBeenCalled();
     });
 
@@ -177,7 +177,7 @@ describe('handleGetCommits', () => {
       await handleGetCommits(mockRequest as Request, mockResponse as Response);
 
       expect(mockStatus).toHaveBeenCalledWith(400);
-      expect(mockJson).toHaveBeenCalledWith({ message: 'no reponame' });
+      expect(mockJson).toHaveBeenCalledWith({ message: 'repoName query parameter is required' });
       expect(mockGetCommitHistory).not.toHaveBeenCalled();
     });
 
@@ -191,7 +191,7 @@ describe('handleGetCommits', () => {
     //   await handleGetCommits(mockRequest as Request, mockResponse as Response);
 
     //   expect(mockStatus).toHaveBeenCalledWith(400);
-    //   expect(mockJson).toHaveBeenCalledWith({ message: 'no reponame' });
+    //   expect(mockJson).toHaveBeenCalledWith({ message: 'repoName query parameter is required' });
     //   expect(mockGetCommitHistory).not.toHaveBeenCalled();
     // });
   });
@@ -210,7 +210,7 @@ describe('handleGetCommits', () => {
       await handleGetCommits(mockRequest as Request, mockResponse as Response);
 
       expect(mockStatus).toHaveBeenCalledWith(500);
-      expect(mockJson).toHaveBeenCalledWith({ error: error });
+      expect(mockJson).toHaveBeenCalledWith({ error: 'Failed to fetch commit history' });
     });
 
     it('should handle different types of errors', async () => {
@@ -226,7 +226,7 @@ describe('handleGetCommits', () => {
       await handleGetCommits(mockRequest as Request, mockResponse as Response);
 
       expect(mockStatus).toHaveBeenCalledWith(500);
-      expect(mockJson).toHaveBeenCalledWith({ error: networkError });
+      expect(mockJson).toHaveBeenCalledWith({ error: 'Failed to fetch commit history' });
     });
 
     it('should handle non-Error objects', async () => {
@@ -242,7 +242,7 @@ describe('handleGetCommits', () => {
       await handleGetCommits(mockRequest as Request, mockResponse as Response);
 
       expect(mockStatus).toHaveBeenCalledWith(500);
-      expect(mockJson).toHaveBeenCalledWith({ error: stringError });
+      expect(mockJson).toHaveBeenCalledWith({ error: 'Failed to fetch commit history' });
     });
   });
 
