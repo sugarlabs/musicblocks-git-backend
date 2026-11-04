@@ -898,7 +898,13 @@ paths:
                     type: string
                     example: "Project reported successfully"
         "400":
-          description: Missing or invalid `repoName`.
+          description: Missing or invalid `repoName`, or `description` is not a string or is longer than 1000 characters.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        "404":
+          description: No project with that `repoName` exists.
           content:
             application/json:
               schema:
