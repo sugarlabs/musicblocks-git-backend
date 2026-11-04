@@ -524,10 +524,10 @@ paths:
         - name: topic
           in: query
           required: false
-          description: Filter projects by a single GitHub topic tag (e.g. `music`).
+          description: Comma-separated topic tags. Projects must contain every selected tag, regardless of stored order or intervening tags. Matching is case-insensitive; surrounding input whitespace and empty entries are ignored.
           schema:
             type: string
-            example: "music"
+            example: "music,math"
       responses:
         "200":
           description: Project list retrieved successfully.
