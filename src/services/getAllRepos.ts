@@ -10,12 +10,15 @@ export const getAllRepositories = async (pagination: Pagination, sort: string = 
     
     let query = `SELECT ${PUBLIC_PROJECT_COLUMNS} FROM projects WHERE visible = 1`;
     let countQuery = `SELECT count(*) as total FROM projects WHERE visible = 1`;
-    const params: any[] = [];
+    const params: string[] = [];
     
     if (topic) {
+      const topics = topic.split(',').map(tag => tag.trim().toLowerCase()).filter(Boolean);
+      for (const selectedTopic of topics) {
         query += ` AND LOWER(',' || COALESCE(theme, '') || ',') LIKE ? ESCAPE '\\'`;
         countQuery += ` AND LOWER(',' || COALESCE(theme, '') || ',') LIKE ? ESCAPE '\\'`;
-        params.push(`%,${escapeLike(topic.trim().toLowerCase())},%`);
+        params.push(`%,${escapeLike(selectedTopic)},%`);
+      }
     }
     
     // Validate sort to prevent SQL injection
