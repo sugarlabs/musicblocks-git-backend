@@ -47,9 +47,43 @@ const ensureProjectsTableExists = () => {
             updatedAt   TEXT NOT NULL DEFAULT (datetime('now')),
             githubUrl   TEXT NOT NULL DEFAULT '',
             planetId    TEXT,
-            hashedKey   TEXT NOT NULL DEFAULT ''
+            hashedKey   TEXT NOT NULL DEFAULT '',
+            projectName TEXT NOT NULL DEFAULT '',
+            theme       TEXT NOT NULL DEFAULT 'default',
+            creatorName TEXT NOT NULL DEFAULT '',
+            hasThumbnail  INTEGER NOT NULL DEFAULT 0,
+            isMigrated    INTEGER NOT NULL DEFAULT 0,
+            isMusicBlocks INTEGER NOT NULL DEFAULT 1
         );
     `);
+    ensureProjectColumns(db);
+};
+
+// Columns the controllers read and write (see services/projectColumns.ts and
+// controllers/createProject.ts) that the first version of the minimal table
+// above did not have. Without them, POST /create fails with "table projects
+// has no column named projectName" after the GitHub repo is already created,
+// and GET /projects fails, on any volume the migration hasn't run on yet.
+// Adding them to an existing table keeps volumes that booted with the old
+// minimal table working; a migrated table already has them, so nothing changes.
+export const PROJECT_COLUMN_DEFAULTS: Record<string, string> = {
+    projectName: "TEXT NOT NULL DEFAULT ''",
+    theme: "TEXT NOT NULL DEFAULT 'default'",
+    creatorName: "TEXT NOT NULL DEFAULT ''",
+    hasThumbnail: "INTEGER NOT NULL DEFAULT 0",
+    isMigrated: "INTEGER NOT NULL DEFAULT 0",
+    isMusicBlocks: "INTEGER NOT NULL DEFAULT 1",
+};
+
+export const ensureProjectColumns = (database: Database.Database) => {
+    const existing = new Set(
+        (database.prepare(`PRAGMA table_info(projects)`).all() as { name: string }[]).map(c => c.name)
+    );
+    for (const [name, definition] of Object.entries(PROJECT_COLUMN_DEFAULTS)) {
+        if (!existing.has(name)) {
+            database.exec(`ALTER TABLE projects ADD COLUMN ${name} ${definition}`);
+        }
+    }
 };
 
 const initializeIndexes = () => {
