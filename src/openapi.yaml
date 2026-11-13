@@ -860,6 +860,80 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
 
+  /toggleVisibility:
+    put:
+      summary: Change a project's Planet visibility
+      description: |
+        Sets the matching SQLite project's `visible` field to `0` or `1`.
+        This operation does not delete the repository, files, history, or metadata.
+        The owner key is SHA-256 hashed and compared with `hashedKey` in the
+        repository's GitHub `metaData.json`. Both unpublishing and republishing
+        require a valid owner key. `/publish` remains available for its additional
+        project details and thumbnail updates.
+      tags: [Planet]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [repoName, key, visible]
+              properties:
+                repoName:
+                  $ref: '#/components/schemas/RepoName'
+                key:
+                  type: string
+                  description: Plain-text ownership key returned when the project was created or forked.
+                visible:
+                  type: boolean
+                  description: Set false to unpublish or true to republish.
+      responses:
+        "200":
+          description: Visibility updated.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, visible]
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  visible:
+                    type: boolean
+                    example: false
+        "400":
+          description: Missing or invalid request fields.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        "403":
+          description: Invalid owner key.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        "404":
+          description: Project or GitHub metadata not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        "500":
+          description: Database failure.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        "502":
+          description: GitHub ownership verification failed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+
   /report:
     post:
       summary: Report a project for moderation
