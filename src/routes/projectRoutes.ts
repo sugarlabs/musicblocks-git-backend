@@ -20,6 +20,7 @@ import { handleDownloadProject } from '../controllers/downloadProject';
 import { handlePublishProject } from '../controllers/publishProject';
 import { handleReportProject } from '../controllers/reportProject';
 import { handleGetTagManifest } from '../controllers/getTagManifest';
+import { handleToggleVisibility } from '../controllers/toggleVisibility';
 
 const projectRouter = express.Router();
 
@@ -62,6 +63,7 @@ projectRouter.post('/createBranch', handleCreateBranch);
 projectRouter.get('/thumbnail/:repoName', handleGetThumbnail);
 projectRouter.get('/download/:repoName', handleDownloadProject);
 projectRouter.post('/publish', publishLimiter, verifyOwner, handlePublishProject);
+projectRouter.put('/toggleVisibility', handleToggleVisibility);
 projectRouter.post('/report', reportLimiter, handleReportProject);
 
 export default projectRouter;
