@@ -43,6 +43,15 @@ const reportLimiter = rateLimit({
     message: { error: 'Too many report requests from this IP. Limit: 5 per hour.' },
 });
 
+// Toggle visibility: max 20 per IP per hour to slow down owner-key guessing.
+const toggleVisibilityLimiter = rateLimit({
+    windowMs: 60 * 60 * 1000,   // 1 hour
+    max: 20,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { error: 'Too many visibility requests from this IP. Limit: 20 per hour.' },
+});
+
 // ── Routes ────────────────────────────────────────────────────────────────────
 projectRouter.post('/create', handleCreateProject);
 projectRouter.post('/fork', handleForkProject);
@@ -63,7 +72,7 @@ projectRouter.post('/createBranch', handleCreateBranch);
 projectRouter.get('/thumbnail/:repoName', handleGetThumbnail);
 projectRouter.get('/download/:repoName', handleDownloadProject);
 projectRouter.post('/publish', publishLimiter, verifyOwner, handlePublishProject);
-projectRouter.put('/toggleVisibility', handleToggleVisibility);
+projectRouter.put('/toggleVisibility', toggleVisibilityLimiter, handleToggleVisibility);
 projectRouter.post('/report', reportLimiter, handleReportProject);
 
 export default projectRouter;

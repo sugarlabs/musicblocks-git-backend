@@ -866,8 +866,8 @@ paths:
       description: |
         Sets the matching SQLite project's `visible` field to `0` or `1`.
         This operation does not delete the repository, files, history, or metadata.
-        The owner key is SHA-256 hashed and compared with `hashedKey` in the
-        repository's GitHub `metaData.json`. Both unpublishing and republishing
+        The owner key is SHA-256 hashed and compared with the `hashedKey` stored
+        in SQLite (same check as `/publish`); GitHub is not contacted. Both unpublishing and republishing
         require a valid owner key. `/publish` remains available for its additional
         project details and thumbnail updates.
       tags: [Planet]
@@ -915,7 +915,13 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
         "404":
-          description: Project or GitHub metadata not found.
+          description: Project not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        "429":
+          description: Rate limit exceeded (20 requests per IP per hour).
           content:
             application/json:
               schema:
@@ -926,13 +932,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-        "502":
-          description: GitHub ownership verification failed.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-
 
   /report:
     post:

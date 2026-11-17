@@ -38,7 +38,7 @@ describe("handleToggleVisibility", () => {
   });
 
   it("rejects an invalid owner key", async () => {
-    mockToggle.mockRejectedValueOnce(new VisibilityError(403, "Invalid key — permission denied"));
+    mockToggle.mockImplementationOnce(() => { throw new VisibilityError(403, "Invalid key — permission denied"); });
     const res = makeResponse();
     await handleToggleVisibility({ body: { repoName: "song", key: "bad", visible: false } } as Request, res);
     expect(res.status).toHaveBeenCalledWith(403);
@@ -46,7 +46,7 @@ describe("handleToggleVisibility", () => {
   });
 
   it("returns 404 for an unknown project", async () => {
-    mockToggle.mockRejectedValueOnce(new VisibilityError(404, "Project not found"));
+    mockToggle.mockImplementationOnce(() => { throw new VisibilityError(404, "Project not found"); });
     const res = makeResponse();
     await handleToggleVisibility({ body: { repoName: "missing", key: "owner-key", visible: false } } as Request, res);
     expect(res.status).toHaveBeenCalledWith(404);

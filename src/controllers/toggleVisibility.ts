@@ -17,7 +17,7 @@ export const handleToggleVisibility = async (req: Request, res: Response): Promi
     }
 
     try {
-        await toggleProjectVisibility(repoName.trim(), key, visible);
+        toggleProjectVisibility(repoName.trim(), key, visible);
         res.status(200).json({ success: true, visible });
     } catch (error) {
         if (error instanceof VisibilityError) {
