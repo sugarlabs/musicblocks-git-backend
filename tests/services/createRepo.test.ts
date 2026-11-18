@@ -77,7 +77,7 @@ describe('createRepo', () => {
         description: 'A piano project',
         private: false,
         has_issues: true,
-        hash_projects: true,
+        has_projects: true,
         has_wiki: true,
         headers: {
           "X-GitHub-Api-Version": "2022-11-28",
@@ -185,7 +185,7 @@ describe('createRepo', () => {
         description: 'A piano project',
         private: false,
         has_issues: true,
-        hash_projects: true,
+        has_projects: true,
         has_wiki: true,
         headers: {
           "X-GitHub-Api-Version": "2022-11-28",

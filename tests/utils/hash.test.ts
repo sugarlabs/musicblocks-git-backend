@@ -15,6 +15,11 @@ describe('Hash Utilities', () => {
     jest.clearAllMocks();
   });
 
+  afterEach(() => {
+    // A failed assertion skips the restoreAllMocks() at the end of a test, which would leave `Date` mocked for the next one.
+    jest.restoreAllMocks();
+  });
+
   describe('generateKey', () => {
     it('should generate a random key using crypto.randomBytes', () => {
       const mockRandomBytes = Buffer.from('test-random-bytes-32-chars-long');
@@ -126,8 +131,13 @@ describe('Hash Utilities', () => {
       const result = createMetaData('test-hash', 'piano');
 
       expect(result).toEqual({
+        projectName: '',
         createdAt: '2024-01-01T12:00:00.000Z',
+        updatedAt: '2024-01-01T12:00:00.000Z',
         theme: 'piano',
+        originalCreator: 'anonymous',
+        isMigrated: false,
+        isMusicBlocks: true,
         hashedKey: 'test-hash'
       });
 
@@ -149,19 +159,34 @@ describe('Hash Utilities', () => {
       jest.restoreAllMocks();
     });
 
-    it('should handle empty theme strings', () => {
+    it('should fall back to the default theme for an empty theme string', () => {
       const mockDate = new Date('2024-01-01T12:00:00.000Z');
       jest.spyOn(global, 'Date').mockImplementation(() => mockDate as never);
 
       const result = createMetaData('test-hash', '');
 
       expect(result).toEqual({
+        projectName: '',
         createdAt: '2024-01-01T12:00:00.000Z',
-        theme: '',
+        updatedAt: '2024-01-01T12:00:00.000Z',
+        theme: 'default',
+        originalCreator: 'anonymous',
+        isMigrated: false,
+        isMusicBlocks: true,
         hashedKey: 'test-hash'
       });
 
       jest.restoreAllMocks();
+    });
+
+    it('should record the project name and creator when given', () => {
+      const mockDate = new Date('2024-01-01T12:00:00.000Z');
+      jest.spyOn(global, 'Date').mockImplementation(() => mockDate as never);
+
+      const result = createMetaData('test-hash', 'piano', 'My Song', 'alice');
+
+      expect(result.projectName).toBe('My Song');
+      expect(result.originalCreator).toBe('alice');
     });
 
     it('should handle special characters in theme', () => {
@@ -172,8 +197,13 @@ describe('Hash Utilities', () => {
       const result = createMetaData('test-hash', specialTheme);
 
       expect(result).toEqual({
+        projectName: '',
         createdAt: '2024-01-01T12:00:00.000Z',
+        updatedAt: '2024-01-01T12:00:00.000Z',
         theme: 'rock & roll!',
+        originalCreator: 'anonymous',
+        isMigrated: false,
+        isMusicBlocks: true,
         hashedKey: 'test-hash'
       });
 
@@ -218,8 +248,13 @@ describe('Hash Utilities', () => {
       expect(key).toBe('746573742d72616e646f6d2d62797465732d33322d63686172732d6c6f6e67');
       expect(hashedKey).toBe('hashed-key-result');
       expect(metadata).toEqual({
+        projectName: '',
         createdAt: '2024-01-01T12:00:00.000Z',
+        updatedAt: '2024-01-01T12:00:00.000Z',
         theme: 'jazz',
+        originalCreator: 'anonymous',
+        isMigrated: false,
+        isMusicBlocks: true,
         hashedKey: 'hashed-key-result'
       });
 
